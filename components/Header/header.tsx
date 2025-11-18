@@ -1,0 +1,100 @@
+import { useRouter } from 'expo-router';
+import { CircleUserRound, Menu } from 'lucide-react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+
+interface HeaderProps {
+  title?: string;
+  showBackButton?: boolean;
+  showMenuButton?: boolean;
+  onBackPress?: () => void;
+  onMenuPress?: () => void;
+  rightComponent?: React.ReactNode;
+}
+
+export function Header({
+  title,
+  showBackButton = false,
+  showMenuButton = false,
+  onBackPress,
+  onMenuPress,
+  rightComponent,
+}: HeaderProps) {
+  const router = useRouter();
+
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+    } else {
+      router.back();
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Bouton retour */}
+      <View style={styles.leftSection}>
+        {showBackButton && (
+          <Pressable onPress={handleBackPress} style={styles.iconButton}>
+           <CircleUserRound size={30} color="#FFFFFF" />
+          </Pressable>
+        )}
+      </View>
+
+      {/* Titre */}
+      <View style={styles.centerSection}>
+        {title && <Text style={styles.title}>{title}</Text>}
+      </View>
+
+      {/* Section droite */}
+      <View style={styles.rightSection}>
+        {showMenuButton && (
+          <Pressable onPress={onMenuPress} style={styles.iconButton}>
+            <Menu size={24} color="#FFFFFF" />
+          </Pressable>
+        )}
+        {rightComponent}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 60,
+    paddingHorizontal: 12,
+    backgroundColor: '#000000',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+  },
+  leftSection: {
+    flex: 0.5,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  centerSection: {
+    flex: 2,
+    alignItems: 'flex-start',
+  },
+  rightSection: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
+});
