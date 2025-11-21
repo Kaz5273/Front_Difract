@@ -1,8 +1,7 @@
-import { useRouter } from 'expo-router';
-import { CircleUserRound, Menu } from 'lucide-react-native';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { useRouter } from "expo-router";
+import { CircleUserRound, Sparkle, Bell, Heart } from "lucide-react-native";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface HeaderProps {
   title?: string;
@@ -37,7 +36,7 @@ export function Header({
       <View style={styles.leftSection}>
         {showBackButton && (
           <Pressable onPress={handleBackPress} style={styles.iconButton}>
-           <CircleUserRound size={30} color="#FFFFFF" />
+            <CircleUserRound size={30} color="#FFFFFF" />
           </Pressable>
         )}
       </View>
@@ -49,11 +48,17 @@ export function Header({
 
       {/* Section droite */}
       <View style={styles.rightSection}>
+        <Pressable onPress={onMenuPress} style={styles.iconButton}>
+          <Heart size={24} color="#FFFFFF" />
+        </Pressable>
         {showMenuButton && (
           <Pressable onPress={onMenuPress} style={styles.iconButton}>
-            <Menu size={24} color="#FFFFFF" />
+            <Sparkle size={24} color="#FFFFFF" />
           </Pressable>
         )}
+        <Pressable onPress={onMenuPress} style={styles.iconButton}>
+          <Bell size={24} color="#FFFFFF" />
+        </Pressable>
         {rightComponent}
       </View>
     </View>
@@ -62,36 +67,36 @@ export function Header({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     height: 60,
     paddingHorizontal: 12,
-    backgroundColor: '#000000',
+    backgroundColor: "#000000",
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    borderBottomColor: "#1a1a1a",
   },
   leftSection: {
     flex: 0.5,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "flex-start",
     gap: 8,
   },
   centerSection: {
     flex: 2,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   rightSection: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
   },
   title: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
   iconButton: {
     padding: 8,

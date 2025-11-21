@@ -11,14 +11,29 @@ interface OnboardingSlideProps {
 
 export function OnboardingSlide({ slide, index = 0 }: OnboardingSlideProps) {
  const isFirstSlide = index === 0;
+ const isFourthSlide = index === 3;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{slide.title}</Text>
-      <Text style={styles.description}>{slide.description}</Text>
+      <Text style={[styles.title, isFirstSlide && styles.firstSlideTitle]}>
+        {slide.title.map((part, i) => (
+          <Text 
+            key={i} 
+            style={part.bold ? styles.boldText : styles.regularText}
+          >
+            {part.text}
+          </Text>
+        ))}
+      </Text>
         <View style={styles.imageContainer}>
             <Image source={slide.image} style={styles.image}  resizeMode="contain"/>
-               {!isFirstSlide && <VignetteGradient intensity={0.95} size={40} />}
+               {!isFirstSlide && (
+              <VignetteGradient 
+                intensity={0.95} 
+                size={40} 
+                sides={isFourthSlide ? ['top', 'bottom', 'left', 'right'] : ['top', 'bottom']}
+              />
+            )}
         </View>
     </View>
   );
@@ -32,18 +47,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontFamily: 'Area-Bold',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 30,
+    padding: 5, 
   },
-    image: {
+    firstSlideTitle: {
+    marginBottom: -100,
+  },
+  image: {
     width: '100%',
     height: '100%',
   },
   imageContainer: {
-    marginBottom: 40,
+    marginBottom: 20,
     width: SCREEN_WIDTH * 0.8, // 70% de la largeur de l'écran
     height: SCREEN_WIDTH * 0.8, // Même hauteur pour un carré
     justifyContent: 'center',
@@ -54,10 +73,17 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     color: '#CCCCCC',
+    fontFamily: 'Area-Bold',
     textAlign: 'center',
     lineHeight: 15,
     marginBottom: 30,
     padding: 10,
+  },
+  regularText: {
+    fontFamily: 'Area-Regular',
+  },
+  boldText: {
+    fontFamily: 'Area-Bold',
   },
 
 });

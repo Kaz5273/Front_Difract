@@ -6,6 +6,7 @@ const ONBOARDING_KEY = '@onboarding_completed';
 
 export function useOnboarding() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkOnboarding();
@@ -14,10 +15,12 @@ export function useOnboarding() {
   const checkOnboarding = async () => {
     try {
       const value = await AsyncStorage.getItem(ONBOARDING_KEY);
-      setIsOnboardingComplete(value === 'true');
+      setIsOnboardingComplete(value === 'null');
     } catch (error) {
       console.error('Error checking onboarding:', error);
       setIsOnboardingComplete(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -41,6 +44,7 @@ export function useOnboarding() {
 
   return {
     isOnboardingComplete,
+    isLoading,
     completeOnboarding,
     resetOnboarding,
   };

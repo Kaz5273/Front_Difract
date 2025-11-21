@@ -1,8 +1,9 @@
 import { HapticTab } from '@/components/haptic-tab';
+import IconVote from '@/components/icons/iconVote';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
-import { Calendar, Hand, Home, Search } from 'lucide-react-native';
+import { Calendar, Home, Search } from 'lucide-react-native';
 import React from 'react';
 
 export default function TabLayout() {
@@ -32,7 +33,8 @@ export default function TabLayout() {
         name="Vote"
         options={{
           title: 'Vote',
-          tabBarIcon: ({ color }) => <Hand size={24}  color={color} />,
+          tabBarIcon: ({ color }) => <IconVote color={color} />,
+
         }}
       />
       <Tabs.Screen
