@@ -25,6 +25,10 @@ export const ENDPOINTS = {
   ARTISTS_REGISTER: '/api/artists/register',
   ARTISTS_UNREGISTER: '/api/artists/unregister',
   ARTIST_EVENTS: (userId: string | number) => `/api/artists/${userId}/events`,
-};
+
+  STYLES: '/api/styles',
+  STYLE_BY_ID: (id: string | number) => `/api/styles/${id}`,
+} as const;
+  
 
 export default ENDPOINTS;

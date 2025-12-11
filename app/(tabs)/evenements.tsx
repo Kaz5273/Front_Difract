@@ -7,9 +7,9 @@ import { Header } from "@/components/Header/header";
 export default function VoteScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Header title=" Les votes" showBackButton showMenuButton />
+      <Header title="Événements" showBackButton showMenuButton />
       <View style={styles.content}>
-        <ThemedText type="body">Vote</ThemedText>
+        <ThemedText type="body"></ThemedText>
       </View>
     </SafeAreaView>
   );

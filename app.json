@@ -26,6 +26,20 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-font",
+        {
+          "fonts": [
+             "./assets/fonts/Area-Black.otf",
+               "./assets/fonts/Area-Bold.otf",
+               "./assets/fonts/Area-ExtraBold.otf",
+               "./assets/fonts/Area-SemiBold.otf",
+               "./assets/fonts/Area-Thin.otf",  
+              "./assets/fonts/ClashDisplay-Regular.otf"
+            
+          ]
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -39,6 +53,7 @@
           }
         }
       ]
+      
     ],
     "experiments": {
       "typedRoutes": true,

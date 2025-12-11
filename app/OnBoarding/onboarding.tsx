@@ -114,14 +114,14 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 40,
-    paddingBottom: 40,
+    paddingBottom: 70,
     gap: 32,
   },
   buttonsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+    gap: 20,
   },
   skipButton: {
     paddingHorizontal: 20,

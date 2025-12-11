@@ -13,7 +13,14 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role?: 'PUBLIC' | 'ARTIST') => Promise<void>;
+  register: (
+    name: string, 
+    email: string, 
+    password: string, 
+    role?: 'PUBLIC' | 'ARTIST',
+    primaryStyleId?: number | null,
+    secondaryStyleIds?: number[]
+  ) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   updateUser: (user: User) => void;
@@ -68,19 +75,29 @@ export const useAuthStore = create<AuthState>((set) => ({
   // ============================================
   // REGISTER
   // ============================================
-  register: async (name: string, email: string, password: string, role: 'PUBLIC' | 'ARTIST' = 'PUBLIC') => {
+  register: async (name: string, email: string, password: string, role: 'PUBLIC' | 'ARTIST' = 'PUBLIC', primaryStyleId?: number | null,
+    secondaryStyleIds?: number[]) => {
     try {
       set({ isLoading: true, error: null });
       console.log('📝 Attempting registration...');
       
-      const response: AuthResponse = await authService.register({
-        name,
-        email,
-        password,
-        password_confirmation: password,
-        role,
-      });
-      
+          const payload: any = {
+      name,
+      email,
+      password,
+      password_confirmation: password,
+      role,
+    };
+      if (role === 'ARTIST' && primaryStyleId) {
+        payload.primary_style_id = primaryStyleId;
+        payload.secondary_style_ids = secondaryStyleIds || [];
+        console.log('🎵 Registering artist with styles:', {
+          primary: primaryStyleId,
+          secondary: secondaryStyleIds,
+        });
+      }
+
+       const response: AuthResponse = await authService.register(payload);
       // Sauvegarder dans AsyncStorage
       await storage.saveToken(response.token);
       await storage.saveUser(response.user);

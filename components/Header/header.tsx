@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { CircleUserRound, Sparkle, Bell, Heart } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ThemedText } from "../themed-text";
 
 interface HeaderProps {
   title?: string;
@@ -43,7 +44,7 @@ export function Header({
 
       {/* Titre */}
       <View style={styles.centerSection}>
-        {title && <Text style={styles.title}>{title}</Text>}
+        {title && <ThemedText type="header">{title}</ThemedText>}
       </View>
 
       {/* Section droite */}
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     height: 60,
-    paddingHorizontal: 12,
+    paddingHorizontal: 2,
     backgroundColor: "#000000",
     borderBottomWidth: 1,
     borderBottomColor: "#1a1a1a",
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   iconButton: {
-    padding: 8,
+    padding: 6,
     borderRadius: 8,
   },
 });

@@ -3,6 +3,8 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
+import { processFontWeight } from "react-native-reanimated/lib/typescript/css/native";
+
 
 const tintColorLight = '#FC5F67';
 const tintColorDark = '#FC5F67';
@@ -29,15 +31,21 @@ export const Colors = {
 export const Fonts = {
   regular: 'Area-Regular',
   bold: 'Area-Bold',
+  normalBlack: 'Area-NormalBlack',
+  extraBold: 'Area-ExtraBold',
   semiBold: 'Area-SemiBold',
   thin: 'Area-Thin',
+  header: 'ClashDisplay-SemiBold',
+  
 };
 
 export const Typography = {
   h1: {
-    fontFamily: Fonts.bold,
-    fontSize: 32,
-    lineHeight: 40,
+    fontFamily: Fonts.extraBold,
+    fontSize: 20,
+    lineHeight: 32,
+    letterSpacing: -0.8,
+    fontWeight: '800',
   },
   h2: {
     fontFamily: Fonts.semiBold,
@@ -68,5 +76,23 @@ export const Typography = {
     fontFamily: Fonts.thin,
     fontSize: 12,
     lineHeight: 16,
+  },
+  subtitle: {
+    fontSize: 20,
+    fontFamily: Fonts.semiBold,
+  },
+  link: {
+    lineHeight: 30,
+    fontSize: 16,
+    color: "#0a7ea4",
+    fontFamily: Fonts.regular,
+  },
+  header: {
+    fontFamily: Fonts.header,
+    fontSize: 22,
+    lineHeight: 36,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.44,
   },
 };

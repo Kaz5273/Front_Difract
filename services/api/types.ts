@@ -61,6 +61,33 @@ export interface Vote {
   created_at: string;
 }
 
+/**
+ * Représente un style musical
+ */
+export interface MusicStyle {
+  id: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Payload pour la sélection des styles lors de l'inscription
+ */
+export interface StyleSelection {
+  primary_style_id: number | null;
+  secondary_style_ids: number[];
+}
+
+/**
+ * Réponse API de la liste des styles
+ */
+export interface StylesResponse {
+  data: MusicStyle[];
+  message?: string;
+}
+
 // ============================================
 // API RESPONSE TYPES
 // ============================================
@@ -85,4 +112,30 @@ export interface PaginatedResponse<T> {
   last_page: number;
   per_page: number;
   total: number;
+}
+/**
+ * Représente un style musical
+ */
+export interface MusicStyle {
+  id: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Payload pour la sélection des styles lors de l'inscription
+ */
+export interface StyleSelection {
+  primary_style_id: number | null;
+  secondary_style_ids: number[];
+}
+
+/**
+ * Réponse API de la liste des styles
+ */
+export interface StylesResponse {
+  data: MusicStyle[];
+  message?: string;
 }

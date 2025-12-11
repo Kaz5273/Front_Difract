@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '@/utils/storage';
 
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.25.135.63:8000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apidifract.kazllrd.fr';
 const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT) || 10000;
 
 console.log('🌐 API Base URL:', API_BASE_URL);

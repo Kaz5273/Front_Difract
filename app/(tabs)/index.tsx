@@ -1,5 +1,4 @@
 import { Header } from "@/components/Header/header";
-import { HelloWave } from "@/components/hello-wave";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Link, router } from "expo-router";
@@ -9,12 +8,58 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/use-auth";
+import { Fonts } from "@/constants/theme";
+import { ArtistCard } from "@/components/Artist/ArtistCard";
+import { useState } from "react";
 export default function HomeScreen() {
   // 🪝 Récupération de la fonction logout et de l'état
   const { logout, isLoading, user } = useAuth();
+
+  // État pour gérer les favoris
+  const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
+
+  // Données d'exemple pour les artistes
+  const exampleArtists = [
+    {
+      id: "1",
+      name: "Choi",
+      subtitle: "Here to know",
+      location: "Annecy",
+      imageUrl:
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop",
+      styles: ["RockNRoll", "Indie", "Pop", "Rock"],
+    },
+    {
+      id: "2",
+      name: "Cosi",
+      subtitle: "Soul & Jazz",
+      location: "Lyon",
+      imageUrl:
+        "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
+      styles: ["Jazz", "Soul"],
+    },
+    {
+      id: "3",
+      name: "Cosi",
+      subtitle: "Soul & Jazz",
+      location: "Lyon",
+      imageUrl:
+        "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
+      styles: ["Jazz", "Soul"],
+    },
+  ];
+
+  // Fonction pour basculer le favori
+  const toggleFavorite = (artistId: string) => {
+    setFavorites((prev) => ({
+      ...prev,
+      [artistId]: !prev[artistId],
+    }));
+  };
 
   // 🚪 Fonction de déconnexion
   const handleLogout = async () => {
@@ -47,10 +92,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["left", "right", "bottom", "top"]}
-    >
+    <SafeAreaView style={styles.container} edges={["left", "right", "top"]}>
       <Header title="Accueil" showBackButton showMenuButton />
 
       <ScrollView
@@ -58,53 +100,48 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
       >
         <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Welcome!</ThemedText>
-          <HelloWave />
+          <ThemedText type="h1">Découvrez des artistes</ThemedText>
         </ThemedView>
 
+        {/* Section Artistes */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.artistsSection}
+        >
+          {exampleArtists.map((artist) => (
+            <ArtistCard
+              key={artist.id}
+              id={artist.id}
+              name={artist.name}
+              subtitle={artist.subtitle}
+              location={artist.location}
+              imageUrl={artist.imageUrl}
+              styles={artist.styles}
+              isFavorite={favorites[artist.id]}
+              onPress={() => console.log("Artiste cliqué:", artist.name)}
+              onFavoritePress={() => toggleFavorite(artist.id)}
+              onPlayPress={() => console.log("Play:", artist.name)}
+            />
+          ))}
+        </ScrollView>
+
         <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-          <ThemedText>
-            Edit{" "}
-            <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-            to see changes. Press{" "}
-            <ThemedText type="defaultSemiBold">
-              {Platform.select({
-                ios: "cmd + d",
-                android: "cmd + m",
-                web: "F12",
-              })}
-            </ThemedText>{" "}
-            to open developer tools.
+          <ThemedText type="h1">Les événements proche de chez vous</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.stepContainer}></ThemedView>
+
+        <ThemedView style={styles.stepContainer}>
+          <ThemedText type="subtitle">Test onboarding</ThemedText>
+
+          <ThemedText type="link">
+            <Link href="/OnBoarding/onboarding">Ouvrir le modal</Link>
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.stepContainer}>
-          <Link href="/modal">
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link>
-          <ThemedText>
-            {`Tap the Explore tab to learn more about what's included in this starter app.`}
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-          <ThemedText>
-            {`When you're ready, run `}
-            <ThemedText type="defaultSemiBold">
-              npm run reset-project
-            </ThemedText>{" "}
-            to get a fresh <ThemedText type="defaultSemiBold">app</ThemedText>{" "}
-            directory.
-            <ThemedText type="link">
-              <Link href="/OnBoarding/onboarding">Ouvrir le modal</Link>
-            </ThemedText>
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">test Index Auth</ThemedText>
+          <ThemedText type="subtitle">test Page connexion</ThemedText>
           <Pressable
             onPress={() => {
               router.push("/Auth/Index");
@@ -120,7 +157,7 @@ export default function HomeScreen() {
             disabled={isLoading}
             style={({ pressed }) => [styles.logoutButton]}
           >
-            <ThemedText type="link">
+            <ThemedText type="body">
               {isLoading ? "Déconnexion en cours..." : "Se déconnecter"}
             </ThemedText>
           </Pressable>
@@ -139,14 +176,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    padding: 10,
     gap: 16,
   },
   titleContainer: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8,
-    marginBottom: 16,
+  },
+  artistsSection: {
+    flexDirection: "row",
+    gap: 16,
+    paddingRight: 20,
   },
   stepContainer: {
     gap: 8,

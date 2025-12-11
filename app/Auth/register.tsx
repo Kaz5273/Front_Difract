@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useStyles } from "@/hooks/useStyle";
+import { StyleSelector } from "@/components/Selector/StyleSelector";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -22,6 +24,53 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"PUBLIC" | "ARTIST">("PUBLIC");
   const { register, isLoading, error, clearError } = useAuth();
+  const [primaryStyleId, setPrimaryStyleId] = useState<number | null>(null);
+  const [secondaryStyleIds, setSecondaryStyleIds] = useState<number[]>([]);
+  const {
+    styles: musicStyles,
+    isLoading: stylesLoading,
+    error: stylesError,
+  } = useStyles();
+
+  const handleRoleChange = (newRole: "PUBLIC" | "ARTIST") => {
+    setRole(newRole);
+
+    // Réinitialiser les styles si on passe à PUBLIC
+    if (newRole === "PUBLIC") {
+      setPrimaryStyleId(null);
+      setSecondaryStyleIds([]);
+      console.log("🧹 Styles reset (role changed to PUBLIC)");
+    }
+  };
+
+  const handlePrimaryStyleChange = (styleId: number) => {
+    setPrimaryStyleId(styleId);
+    console.log("🎵 Primary style set to:", styleId);
+  };
+
+  const handleSecondaryStyleToggle = (styleId: number) => {
+    // Si le style est déjà sélectionné, on le retire
+    if (secondaryStyleIds.includes(styleId)) {
+      const newIds = secondaryStyleIds.filter((id) => id !== styleId);
+      setSecondaryStyleIds(newIds);
+      console.log("➖ Secondary style removed:", styleId);
+      return;
+    }
+
+    // Si on a déjà 3 styles, on refuse d'en ajouter plus
+    if (secondaryStyleIds.length >= 3) {
+      Alert.alert(
+        "Limite atteinte",
+        "Vous ne pouvez sélectionner que 3 styles secondaires maximum"
+      );
+      return;
+    }
+
+    // Ajout du nouveau style
+    const newIds = [...secondaryStyleIds, styleId];
+    setSecondaryStyleIds(newIds);
+    console.log("➕ Secondary style added:", styleId);
+  };
 
   const handleRegister = async () => {
     // Validation
@@ -48,8 +97,25 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (role === "ARTIST") {
+      if (primaryStyleId === null) {
+        Alert.alert(
+          "Style manquant",
+          "Vous devez sélectionner un style musical principal"
+        );
+        return;
+      }
+    }
+
     try {
-      await register(name.trim(), email.trim(), password, role);
+      await register(
+        name.trim(),
+        email.trim(),
+        password,
+        role,
+        primaryStyleId,
+        secondaryStyleIds
+      );
       // Redirection après inscription réussie
       router.replace("/(tabs)");
     } catch (error) {
@@ -177,7 +243,26 @@ export default function RegisterScreen() {
                 </Pressable>
               </View>
             </View>
+            {role === "ARTIST" && (
+              <View style={styles.stylesSection}>
+                <Text style={styles.stylesSectionTitle}>
+                  Vos styles musicaux
+                </Text>
+                <Text style={styles.stylesSectionSubtitle}>
+                  Sélectionnez vos préférences musicales
+                </Text>
 
+                <StyleSelector
+                  musicStyles={musicStyles} // ✅ Passer musicStyles (pas styles)
+                  primaryStyleId={primaryStyleId}
+                  secondaryStyleIds={secondaryStyleIds}
+                  onPrimaryStyleChange={handlePrimaryStyleChange}
+                  onSecondaryStyleToggle={handleSecondaryStyleToggle}
+                  isLoading={stylesLoading}
+                  error={stylesError}
+                />
+              </View>
+            )}
             <Pressable
               style={[styles.button, isLoading && styles.buttonDisabled]}
               onPress={handleRegister}
@@ -340,5 +425,27 @@ const styles = StyleSheet.create({
   backText: {
     color: "#666",
     fontSize: 14,
+  },
+  stylesSection: {
+    marginTop: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  stylesSectionHeader: {
+    marginBottom: 12,
+  },
+  stylesSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
+  stylesSectionSubtitle: {
+    fontSize: 14,
+    color: "#666",
   },
 });
