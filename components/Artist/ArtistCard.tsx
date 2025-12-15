@@ -12,6 +12,7 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { MapPin, Sparkle } from "lucide-react-native";
 import IconPlay from "../icons/iconPlay";
+import { Typography } from "@/constants/theme";
 
 interface ArtistCardProps {
   id: string;
@@ -73,7 +74,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
             <View style={styles.topRow}>
               {/* Location Badge */}
               <BlurView intensity={15} style={styles.locationBadge}>
-                <MapPin name="map-pin" size={14} color="#FFFFFF" />
+                <MapPin size={14} color="#FFFFFF" />
                 <Text style={styles.locationText} numberOfLines={1}>
                   {location}
                 </Text>
@@ -127,7 +128,9 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
         {/* Play Button */}
         <Pressable onPress={onPlayPress} style={styles.playButtonContainer}>
           <BlurView intensity={2} style={styles.playButton}>
-            <IconPlay color="#FFFFFF" />
+            <View style={styles.playIconWrapper}>
+              <IconPlay color="#FFFFFF" />
+            </View>
           </BlurView>
         </Pressable>
       </View>
@@ -191,8 +194,9 @@ const styles = StyleSheet.create({
   locationBadge: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     gap: 4,
-    padding: 6,
     borderRadius: 25,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     overflow: "hidden",
@@ -200,7 +204,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontFamily: Fonts.bold,
-    fontSize: 11,
+    fontSize: 10,
     color: "#FFFFFF",
     letterSpacing: -0.4,
   },
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
   },
   styleText: {
     fontFamily: Fonts.bold,
-    fontSize: 11,
+    fontSize: 10,
     color: "#FFFFFF",
     letterSpacing: -0.4,
   },
@@ -246,22 +250,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 5,
+    paddingHorizontal: 0,
     gap: 10,
   },
   nameContainer: {
     flex: 1,
-    gap: 1,
   },
   artistName: {
-    fontFamily: Fonts.extraBold,
+    ...Typography.body,
     fontSize: 16,
     color: "#FFFFFF",
     letterSpacing: -0.56,
+    marginBottom: -3,
   },
   artistSubtitle: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+
+    fontSize: 12,
     color: "rgba(255, 255, 255, 0.7)",
     letterSpacing: -0.48,
   },
@@ -269,6 +274,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 32,
+    borderWidth: 1,
+
     overflow: "hidden",
   },
   playButton: {
@@ -277,5 +284,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.15)",
     justifyContent: "center",
     alignItems: "center",
+    gap: 4,
+  },
+  playIconWrapper: {
+    marginLeft: 2,
+    fontSize: 30,
   },
 });

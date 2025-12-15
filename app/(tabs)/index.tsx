@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Fonts } from "@/constants/theme";
 import { ArtistCard } from "@/components/Artist/ArtistCard";
 import { useState } from "react";
+import { EventCard } from "@/components/Event/EventCard";
+import { LocationBadge } from "@/components/Badges/LocationBadge";
 export default function HomeScreen() {
   // 🪝 Récupération de la fonction logout et de l'état
   const { logout, isLoading, user } = useAuth();
@@ -61,6 +63,46 @@ export default function HomeScreen() {
     }));
   };
 
+  // Données d'exemple pour les événements
+  const exampleEvents = [
+    {
+      id: 1,
+      title: "Espace rencontre",
+      location: "Annecy-le-vieux",
+      distance: "150km",
+      eventDate: "2025-06-06T18:00:00.000Z",
+      timeRange: "18h00 à 00h00",
+      price: 22.5,
+      imageUrl:
+        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop",
+      styles: ["Jazz", "Expérimentale"],
+      friendsGoing: 3,
+      friendsAvatars: [
+        "https://i.pravatar.cc/150?img=1",
+        "https://i.pravatar.cc/150?img=2",
+        "https://i.pravatar.cc/150?img=3",
+      ],
+    },
+    {
+      id: 2,
+      title: "Festival Rock en Seine",
+      location: "Paris",
+      distance: "500km",
+      eventDate: "2025-07-15T20:00:00.000Z",
+      timeRange: "20h00 à 02h00",
+      price: 45.0,
+      imageUrl:
+        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop",
+      styles: ["Rock", "Indie"],
+      friendsGoing: 5,
+      friendsAvatars: [
+        "https://i.pravatar.cc/150?img=4",
+        "https://i.pravatar.cc/150?img=5",
+        "https://i.pravatar.cc/150?img=6",
+      ],
+    },
+  ];
+
   // 🚪 Fonction de déconnexion
   const handleLogout = async () => {
     Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
@@ -99,6 +141,12 @@ export default function HomeScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
+        <View style={styles.locationContainer}>
+          <LocationBadge
+            location="Annecy"
+            onPress={() => console.log("Change location")}
+          />
+        </View>
         <ThemedView style={styles.titleContainer}>
           <ThemedText type="h1">Découvrez des artistes</ThemedText>
         </ThemedView>
@@ -126,42 +174,36 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="h1">Les événements proche de chez vous</ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}></ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test onboarding</ThemedText>
-
-          <ThemedText type="link">
-            <Link href="/OnBoarding/onboarding">Ouvrir le modal</Link>
+        <ThemedView style={styles.titleContainer}>
+          <ThemedText type="h1">
+            Les événements {"\n"}proche de chez vous
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">test Page connexion</ThemedText>
-          <Pressable
-            onPress={() => {
-              router.push("/Auth/Index");
-            }}
-          >
-            <ThemedText type="link">Go to Auth Index</ThemedText>
-          </Pressable>
-        </ThemedView>
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test déco</ThemedText>
-          <Pressable
-            onPress={handleLogout}
-            disabled={isLoading}
-            style={({ pressed }) => [styles.logoutButton]}
-          >
-            <ThemedText type="body">
-              {isLoading ? "Déconnexion en cours..." : "Se déconnecter"}
-            </ThemedText>
-          </Pressable>
-        </ThemedView>
+        {/* Section Événements */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.eventSection}
+        >
+          {exampleEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              id={event.id}
+              title={event.title}
+              location={event.location}
+              distance={event.distance}
+              eventDate={event.eventDate}
+              timeRange={event.timeRange}
+              price={event.price}
+              imageUrl={event.imageUrl}
+              styles={event.styles}
+              friendsGoing={event.friendsGoing}
+              friendsAvatars={event.friendsAvatars}
+              onPress={() => console.log("Événement cliqué:", event.title)}
+            />
+          ))}
+        </ScrollView>
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,34 +211,35 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 2,
     backgroundColor: "#000000",
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 10,
+    paddingVertical: 10,
     gap: 16,
   },
   titleContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: 20,
+    paddingHorizontal: 20,
+    marginBottom: 5,
   },
   artistsSection: {
     flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  eventSection: {
+    flexDirection: "row",
     gap: 16,
-    paddingRight: 20,
+    paddingHorizontal: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  logoutButton: {
-    backgroundColor: "#ef4444",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 8,
+  locationContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
 });

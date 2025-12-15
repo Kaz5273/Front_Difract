@@ -43,7 +43,7 @@ export const Typography = {
   h1: {
     fontFamily: Fonts.extraBold,
     fontSize: 20,
-    lineHeight: 32,
+    lineHeight: 20,
     letterSpacing: -0.8,
     fontWeight: '800',
   },
