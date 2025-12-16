@@ -101,6 +101,42 @@ export default function HomeScreen() {
         "https://i.pravatar.cc/150?img=6",
       ],
     },
+    {
+      id: 3,
+      title: "Espace rencontre",
+      location: "Annecy-le-vieux",
+      distance: "150km",
+      eventDate: "2025-06-06T18:00:00.000Z",
+      timeRange: "18h00 à 00h00",
+      price: 22.5,
+      imageUrl:
+        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop",
+      styles: ["Jazz", "Expérimentale"],
+      friendsGoing: 3,
+      friendsAvatars: [
+        "https://i.pravatar.cc/150?img=1",
+        "https://i.pravatar.cc/150?img=2",
+        "https://i.pravatar.cc/150?img=3",
+      ],
+    },
+    {
+      id: 4,
+      title: "Festival Rock en Seine",
+      location: "Paris",
+      distance: "500km",
+      eventDate: "2025-07-15T20:00:00.000Z",
+      timeRange: "20h00 à 02h00",
+      price: 45.0,
+      imageUrl:
+        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop",
+      styles: ["Rock", "Indie"],
+      friendsGoing: 5,
+      friendsAvatars: [
+        "https://i.pravatar.cc/150?img=4",
+        "https://i.pravatar.cc/150?img=5",
+        "https://i.pravatar.cc/150?img=6",
+      ],
+    },
   ];
 
   // 🚪 Fonction de déconnexion

@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: -0.4,
     textAlign: "center",
-    width: 20,
   },
   dateMonth: {
     fontFamily: Fonts.bold,
@@ -236,7 +235,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     textAlign: "center",
     marginTop: -4,
-    marginBottom: -5,
+    marginBottom: -6,
   },
   stylesContainer: {
     flexDirection: "row",

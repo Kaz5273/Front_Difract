@@ -90,6 +90,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
+    paddingRight: 8,
   },
   title: {
     fontSize: 20,
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   iconButton: {
-    padding: 6,
+    padding: 8,
     borderRadius: 8,
   },
 });

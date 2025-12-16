@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
   },
   filterText: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
     fontSize: 14,
     color: "#000000",
     textAlign: "center",
@@ -314,14 +314,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   monthText: {
-    fontFamily: Fonts.normalBlack,
+    fontFamily: Fonts.extraBold,
     fontSize: 14,
     color: "#000000",
     textAlign: "center",
   },
   daysHeader: {
     flexDirection: "row",
-    width: 313,
+    width: width - 78,
   },
   dayHeaderCell: {
     flex: 1,
@@ -338,10 +338,10 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    width: 313,
+    width: width - 78,
   },
   dayCell: {
-    width: 313 / 7,
+    width: (width - 78) / 7,
     height: 44,
     alignItems: "center",
     justifyContent: "center",

@@ -1,21 +1,19 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { Header } from "@/components/Header/header";
 import { ArtistVoteCard } from "@/components/Artist/ArtistVoteCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
 import { VoteCountdown } from "@/components/Vote/VoteCountdown";
 import { VoteEventCard } from "@/components/Vote/VoteEventCard";
-import { VoteTabSelector } from "@/components/Vote/VoteTabSelector";
+import { TabSelector } from "@/components/Button/TabSelector";
 import { CalendarBadge } from "@/components/Badges/CalendarBadge";
 import { CalendarModal } from "@/components/Calendar/CalendarModal";
+import { Filter } from "lucide-react-native";
+import FilterBadge from "@/components/Badges/FilterBadge";
 
 export default function VoteScreen() {
-  const [activeTab, setActiveTab] = useState<"en-cours" | "termine">(
-    "en-cours"
-  );
+  const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
@@ -88,6 +86,7 @@ export default function VoteScreen() {
             onPress={() => console.log("Change location")}
           />
           <CalendarBadge onPress={() => setCalendarVisible(true)} />
+          <FilterBadge onPress={() => console.log("Open filters")} />
         </View>
 
         {/* Calendar Modal */}
@@ -102,8 +101,13 @@ export default function VoteScreen() {
         />
 
         {/* Tab Selector */}
-        <View style={styles.tabContainer}>
-          <VoteTabSelector activeTab={activeTab} onTabChange={setActiveTab} />
+        <View>
+          <TabSelector
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            firstLabel="Vote en cours"
+            secondLabel="Vote terminé"
+          />
         </View>
 
         {/* Section Vote Info */}
@@ -166,9 +170,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     alignItems: "center",
     gap: 8,
-  },
-  tabContainer: {
-    paddingHorizontal: 15,
   },
   titleContainer: {
     paddingHorizontal: 20,

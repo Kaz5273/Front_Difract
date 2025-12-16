@@ -2,42 +2,46 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Fonts } from "@/constants/theme";
 
-interface VoteTabSelectorProps {
-  activeTab: "en-cours" | "termine";
-  onTabChange: (tab: "en-cours" | "termine") => void;
+interface TabSelectorProps {
+  activeTab: "first" | "second";
+  onTabChange: (tab: "first" | "second") => void;
+  firstLabel: string;
+  secondLabel: string;
 }
 
-export const VoteTabSelector: React.FC<VoteTabSelectorProps> = ({
+export const TabSelector: React.FC<TabSelectorProps> = ({
   activeTab,
   onTabChange,
+  firstLabel,
+  secondLabel,
 }) => {
   return (
     <View style={styles.container}>
       <Pressable
-        style={[styles.tab, activeTab === "en-cours" && styles.activeTab]}
-        onPress={() => onTabChange("en-cours")}
+        style={[styles.tab, activeTab === "first" && styles.activeTab]}
+        onPress={() => onTabChange("first")}
       >
         <Text
           style={[
             styles.tabText,
-            activeTab === "en-cours" && styles.activeTabText,
+            activeTab === "first" && styles.activeTabText,
           ]}
         >
-          Vote en cours
+          {firstLabel}
         </Text>
       </Pressable>
 
       <Pressable
-        style={[styles.tab, activeTab === "termine" && styles.activeTab]}
-        onPress={() => onTabChange("termine")}
+        style={[styles.tab, activeTab === "second" && styles.activeTab]}
+        onPress={() => onTabChange("second")}
       >
         <Text
           style={[
             styles.tabText,
-            activeTab === "termine" && styles.activeTabText,
+            activeTab === "second" && styles.activeTabText,
           ]}
         >
-          Vote terminé
+          {secondLabel}
         </Text>
       </Pressable>
     </View>
@@ -49,7 +53,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 15,
-    paddingHorizontal: 5,
+    paddingHorizontal: 20,
   },
   tab: {
     flex: 1,
@@ -74,4 +78,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VoteTabSelector;
+export default TabSelector;
