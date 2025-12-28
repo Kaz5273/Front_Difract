@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { Header } from "@/components/Header/header";
 import { EventCard } from "@/components/Event/EventCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
@@ -178,7 +176,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   eventsContainer: {
-    paddingHorizontal: 20,
     gap: 16,
+    paddingHorizontal: 20,
   },
 });

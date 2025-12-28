@@ -17,9 +17,12 @@ import { ArtistCard } from "@/components/Artist/ArtistCard";
 import { useState } from "react";
 import { EventCard } from "@/components/Event/EventCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+
 export default function HomeScreen() {
   // 🪝 Récupération de la fonction logout et de l'état
   const { logout, isLoading, user } = useAuth();
+  const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
 
   // État pour gérer les favoris
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
@@ -34,6 +37,11 @@ export default function HomeScreen() {
       imageUrl:
         "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop",
       styles: ["RockNRoll", "Indie", "Pop", "Rock"],
+      mainTrack: {
+        id: "track-1",
+        title: "Jazz Improvisation",
+        duration: "3:45",
+      },
     },
     {
       id: "2",
@@ -43,6 +51,11 @@ export default function HomeScreen() {
       imageUrl:
         "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
       styles: ["Jazz", "Soul"],
+      mainTrack: {
+        id: "track-2",
+        title: "Midnight Blues",
+        duration: "4:20",
+      },
     },
     {
       id: "3",
@@ -52,6 +65,11 @@ export default function HomeScreen() {
       imageUrl:
         "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
       styles: ["Jazz", "Soul"],
+      mainTrack: {
+        id: "track-3",
+        title: "Sunset Melody",
+        duration: "3:12",
+      },
     },
   ];
 
@@ -61,6 +79,25 @@ export default function HomeScreen() {
       ...prev,
       [artistId]: !prev[artistId],
     }));
+  };
+
+  // Fonction pour lancer/mettre en pause la musique principale d'un artiste
+  const handlePlayArtist = (artist: (typeof exampleArtists)[0]) => {
+    if (artist.mainTrack) {
+      // Si la musique de cet artiste est déjà en cours de lecture, mettre en pause
+      if (currentTrack?.id === artist.mainTrack.id && isPlaying) {
+        pause();
+      } else {
+        // Sinon, lancer la musique
+        play({
+          id: artist.mainTrack.id,
+          title: artist.mainTrack.title,
+          artistName: artist.name,
+          artistImage: artist.imageUrl,
+          duration: artist.mainTrack.duration,
+        });
+      }
+    }
   };
 
   // Données d'exemple pour les événements
@@ -202,10 +239,11 @@ export default function HomeScreen() {
               location={artist.location}
               imageUrl={artist.imageUrl}
               styles={artist.styles}
+              trackId={artist.mainTrack?.id}
               isFavorite={favorites[artist.id]}
-              onPress={() => console.log("Artiste cliqué:", artist.name)}
+              onPress={() => router.push(`/artist/${artist.id}`)}
               onFavoritePress={() => toggleFavorite(artist.id)}
-              onPlayPress={() => console.log("Play:", artist.name)}
+              onPlayPress={() => handlePlayArtist(artist)}
             />
           ))}
         </ScrollView>
@@ -223,21 +261,22 @@ export default function HomeScreen() {
           contentContainerStyle={styles.eventSection}
         >
           {exampleEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              location={event.location}
-              distance={event.distance}
-              eventDate={event.eventDate}
-              timeRange={event.timeRange}
-              price={event.price}
-              imageUrl={event.imageUrl}
-              styles={event.styles}
-              friendsGoing={event.friendsGoing}
-              friendsAvatars={event.friendsAvatars}
-              onPress={() => console.log("Événement cliqué:", event.title)}
-            />
+            <View key={event.id} style={styles.eventCardWrapper}>
+              <EventCard
+                id={event.id}
+                title={event.title}
+                location={event.location}
+                distance={event.distance}
+                eventDate={event.eventDate}
+                timeRange={event.timeRange}
+                price={event.price}
+                imageUrl={event.imageUrl}
+                styles={event.styles}
+                friendsGoing={event.friendsGoing}
+                friendsAvatars={event.friendsAvatars}
+                onPress={() => router.push(`/event/${event.id}`)}
+              />
+            </View>
           ))}
         </ScrollView>
       </ScrollView>
@@ -273,6 +312,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
     paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  eventCardWrapper: {
+    width: 355,
   },
   locationContainer: {
     paddingHorizontal: 20,

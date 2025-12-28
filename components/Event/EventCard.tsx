@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Fonts, Typography } from "@/constants/theme";
 import { Calendar, MapPin, Ticket } from "lucide-react-native";
+import { router } from "expo-router";
 
 interface EventCardProps {
   id: number;
@@ -28,6 +29,7 @@ interface EventCardProps {
 }
 
 export const EventCard: React.FC<EventCardProps> = ({
+  id,
   title,
   location,
   distance,
@@ -54,8 +56,17 @@ export const EventCard: React.FC<EventCardProps> = ({
   // Afficher maximum 2 styles
   const displayStyles = musicStyles.slice(0, 2);
 
+  // Gestion du clic - navigation par défaut si pas de onPress personnalisé
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      router.push(`/event/${id}`);
+    }
+  };
+
   return (
-    <Pressable onPress={onPress} style={styles.container}>
+    <Pressable onPress={handlePress} style={styles.container}>
       <ImageBackground
         source={{ uri: imageUrl }}
         style={styles.imageBackground}
@@ -159,8 +170,8 @@ export const EventCard: React.FC<EventCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: 355,
-    height: 200,
+    width: "100%",
+    height: 180,
     borderRadius: 20,
     overflow: "hidden",
   },
@@ -208,7 +219,7 @@ const styles = StyleSheet.create({
   dateBadge: {
     width: 54,
     height: 54,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: "rgba(54, 54, 54, 1)",
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",

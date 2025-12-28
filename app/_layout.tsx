@@ -13,6 +13,8 @@ import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Fonts } from "@/constants/theme";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 
 // Empêcher le splash screen de se cacher automatiquement
 SplashScreen.preventAutoHideAsync();
@@ -56,22 +58,25 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#000000" },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen
-          name="OnBoarding/onboarding"
-          options={{ gestureEnabled: false }}
-        />
-        <Stack.Screen name="Auth/Index" />
-        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AudioPlayerProvider>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: "#000000" },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen
+            name="OnBoarding/onboarding"
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen name="Auth/Index" />
+          <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+        </Stack>
+        <GlobalAudioPlayer />
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </AudioPlayerProvider>
   );
 }

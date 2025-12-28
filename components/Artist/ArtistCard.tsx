@@ -10,9 +10,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { MapPin, Sparkle } from "lucide-react-native";
+import { MapPin, Sparkle, Pause } from "lucide-react-native";
 import IconPlay from "../icons/iconPlay";
 import { Typography } from "@/constants/theme";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 
 interface ArtistCardProps {
   id: string;
@@ -21,6 +22,7 @@ interface ArtistCardProps {
   location: string;
   imageUrl: string;
   styles: string[];
+  trackId?: string; // ID de la musique principale de l'artiste
   isFavorite?: boolean;
   onPress?: () => void;
   onFavoritePress?: () => void;
@@ -33,11 +35,16 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   location,
   imageUrl,
   styles: musicStyles,
+  trackId,
   isFavorite = false,
   onPress,
   onFavoritePress,
   onPlayPress,
 }) => {
+  const { currentTrack, isPlaying } = useAudioPlayer();
+
+  // Vérifier si la musique de cet artiste est en cours de lecture
+  const isArtistPlaying = currentTrack?.id === trackId && isPlaying;
   // Afficher maximum 2 styles + compteur
   const displayStyles = musicStyles.slice(0, 1);
   const remainingCount = musicStyles.length - 1;
@@ -125,12 +132,16 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           </Text>
         </View>
 
-        {/* Play Button */}
+        {/* Play/Pause Button */}
         <Pressable onPress={onPlayPress} style={styles.playButtonContainer}>
           <BlurView intensity={2} style={styles.playButton}>
-            <View style={styles.playIconWrapper}>
-              <IconPlay color="#FFFFFF" />
-            </View>
+            {isArtistPlaying ? (
+              <Pause size={16} color="#FFFFFF" fill="#FFFFFF" />
+            ) : (
+              <View style={styles.playIconWrapper}>
+                <IconPlay color="#FFFFFF" />
+              </View>
+            )}
           </BlurView>
         </Pressable>
       </View>
@@ -236,7 +247,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.10)",
     overflow: "hidden",
     justifyContent: "center",
   },
@@ -265,7 +276,6 @@ const styles = StyleSheet.create({
   },
   artistSubtitle: {
     fontFamily: Fonts.bold,
-
     fontSize: 12,
     color: "rgba(255, 255, 255, 0.7)",
     letterSpacing: -0.48,
@@ -275,7 +285,6 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 32,
     borderWidth: 1,
-
     overflow: "hidden",
   },
   playButton: {
