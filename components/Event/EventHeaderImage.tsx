@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   dateBadge: {
     width: 54,
     height: 54,
-    backgroundColor: "rgba(54, 54, 54, 1)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",

@@ -72,14 +72,13 @@ export default function EventDetailScreen() {
             <ThemedText style={styles.eventTitle}>{event.title}</ThemedText>
           </ThemedView>
 
-          {/* Bouton Billeterie */}
+          {/* Bouton Vote */}
           <Pressable
-            onPress={() => console.log("Accéder à la billeterie")}
-            style={styles.ticketButton}
+            onPress={() => console.log("Redirection vers Vote")}
+            style={styles.voteButton}
           >
-            <Text style={styles.ticketButtonText}>Accéder à la billeterie</Text>
+            <Text style={styles.voteButtonText}>Voter pour cet événement</Text>
           </Pressable>
-
           {/* Informations de l'événement */}
           <View style={styles.eventInfoContainer}>
             {/* Adresse */}
@@ -103,6 +102,14 @@ export default function EventDetailScreen() {
 
           {/* À propos de l'événement */}
           <EventAbout description={event.description} />
+
+          {/* Bouton Billeterie */}
+          <Pressable
+            onPress={() => console.log("Accéder à la billeterie")}
+            style={styles.ticketButton}
+          >
+            <Text style={styles.ticketButtonText}>Accéder à la billeterie</Text>
+          </Pressable>
         </ThemedView>
       </ParallaxScrollView>
     </View>
@@ -146,7 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 11,
     borderRadius: 100,
-    alignSelf: "flex-start",
+    alignSelf: "center",
   },
   ticketButtonText: {
     fontFamily: Fonts.extraBold,
@@ -168,5 +175,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#D7D7D7",
     letterSpacing: -0.48,
+  },
+  voteButton: {
+    backgroundColor: "#FC5F67",
+    paddingHorizontal: 15,
+    paddingVertical: 11,
+    borderRadius: 100,
+    alignSelf: "center",
+    width: "100%",
+  },
+  voteButtonText: {
+    fontFamily: Fonts.extraBold,
+    fontSize: 14,
+    color: "#000000",
+    textAlign: "center",
+    letterSpacing: -0.56,
   },
 });

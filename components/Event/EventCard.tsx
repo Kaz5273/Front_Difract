@@ -94,7 +94,7 @@ export const EventCard: React.FC<EventCardProps> = ({
           {/* Top Row - Date & Styles */}
           <View style={styles.topRow}>
             {/* Date Badge */}
-            <BlurView intensity={15} style={styles.dateBadge}>
+            <BlurView intensity={40} style={styles.dateBadge}>
               <Text style={styles.dateDay}>{day}</Text>
               <Text style={styles.dateDayNum}>{dayNum}</Text>
               <Text style={styles.dateMonth}>{month}</Text>
@@ -112,7 +112,7 @@ export const EventCard: React.FC<EventCardProps> = ({
         </View>
 
         {/* Bottom Info Section */}
-        <BlurView intensity={15} style={styles.bottomSection}>
+        <BlurView intensity={20} style={styles.bottomSection}>
           <View style={styles.infoLeft}>
             <Text style={styles.eventTitle} numberOfLines={1}>
               {title}
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   dateBadge: {
     width: 54,
     height: 54,
-    backgroundColor: "rgba(54, 54, 54, 1)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 74,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backgroundColor: "rgba(0, 0, 0, 0.20)",
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 10,

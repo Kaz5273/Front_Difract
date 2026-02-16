@@ -12,6 +12,7 @@ import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Fonts } from "@/constants/theme";
 import { BlurView } from "expo-blur";
 import { usePathname } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface GlobalAudioPlayerProps {
   forceShow?: boolean; // Permet de forcer l'affichage même sur la page artiste
@@ -25,10 +26,12 @@ export function GlobalAudioPlayer({
   const { currentTrack, isPlaying, togglePlayPause, nextTrack, previousTrack } =
     useAudioPlayer();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
   // Ne pas afficher le player sur la page de détail de l'artiste (sauf si forceShow)
   const isArtistDetailPage = pathname?.startsWith("/artist/");
-
+  const isEventDetailPage = pathname?.startsWith("/event/");
+  const isDetailPage = isArtistDetailPage || isEventDetailPage;
   // Ancienne méthode : if (!currentTrack) { return null; }
   // Le player disparaît maintenant quand la musique n'est plus en lecture (pause ou stop)
   if (!currentTrack || !isPlaying) {
@@ -42,13 +45,24 @@ export function GlobalAudioPlayer({
 
   const containerStyle = [
     styles.container,
-    bottomPosition !== undefined && { bottom: bottomPosition },
+    isDetailPage ? styles.containerDetail : null,
+    !isDetailPage && bottomPosition !== undefined && { bottom: bottomPosition },
   ];
 
+  const blurStyle = [
+    styles.blurContainer,
+    isDetailPage && styles.blurContainerDetail,
+  ];
+
+  const contentStyle = [
+    styles.content,
+    isDetailPage && styles.contentDetail,
+    isDetailPage && { paddingBottom: Math.max(insets.bottom, 12) },
+  ];
   return (
     <View style={containerStyle}>
-      <BlurView intensity={20} style={styles.blurContainer}>
-        <View style={styles.content}>
+      <BlurView intensity={20} style={blurStyle}>
+        <View style={contentStyle}>
           {/* Image et info de la piste */}
           <View style={styles.trackInfo}>
             <Image
@@ -110,6 +124,23 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     zIndex: 1000,
+  },
+  // Style pour les pages détail (pleine largeur, collé en bas)
+  containerDetail: {
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  // Pas d'arrondis sur les pages détail
+  blurContainerDetail: {
+    borderRadius: 0,
+  },
+  // Plus de padding horizontal sur les pages détail
+  contentDetail: {
+    paddingTop: 10,
+    paddingLeft: 16,
+    paddingRight: 16,
+    justifyContent: "center",
   },
   blurContainer: {
     borderRadius: 20,

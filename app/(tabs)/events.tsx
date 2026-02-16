@@ -8,6 +8,7 @@ import { CalendarBadge } from "@/components/Badges/CalendarBadge";
 import { CalendarModal } from "@/components/Calendar/CalendarModal";
 import { TabSelector } from "@/components/Button/TabSelector";
 import FilterBadge from "@/components/Badges/FilterBadge";
+import { router } from "expo-router";
 
 export default function EvenementsScreen() {
   const [calendarVisible, setCalendarVisible] = useState(false);
@@ -143,7 +144,7 @@ export default function EvenementsScreen() {
               styles={event.styles}
               friendsGoing={event.friendsGoing}
               friendsAvatars={event.friendsAvatars}
-              onPress={() => console.log("Événement cliqué:", event.title)}
+              onPress={() => router.push(`/event/${event.id}`)}
             />
           ))}
         </View>
