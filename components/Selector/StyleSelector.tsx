@@ -84,9 +84,8 @@ export function StyleSelector({
                 key={`primary-${style.id}`}
                 id={style.id}
                 name={style.name}
-                isSelected={primaryStyleId === style.id}
                 onPress={onPrimaryStyleChange}
-                variant="primary"
+                variant={primaryStyleId === style.id ? "selectedBlack" : "outline"}
               />
             )
           )}
@@ -115,10 +114,9 @@ export function StyleSelector({
                   key={`secondary-${style.id}`}
                   id={style.id}
                   name={style.name}
-                  isSelected={isSelected}
                   onPress={onSecondaryStyleToggle}
                   disabled={isDisabled}
-                  variant="secondary"
+                  variant={isSelected ? "selectedBlack" : "outline"}
                 />
               );
             })}
@@ -165,11 +163,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chipsContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
     paddingVertical: 4,
   },
   chipsWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
+    alignItems: "flex-start",
   },
   loadingText: {
     marginTop: 12,

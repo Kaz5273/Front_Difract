@@ -3,12 +3,14 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+import { Asset } from "expo-asset";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Text, TextInput } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -26,7 +28,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     [Fonts.regular]: require("../assets/fonts/Area-Regular.otf"),
     [Fonts.bold]: require("../assets/fonts/Area-Bold.otf"),
     [Fonts.semiBold]: require("../assets/fonts/Area-SemiBold.otf"),
@@ -36,8 +38,28 @@ export default function RootLayout() {
     [Fonts.header]: require("../assets/fonts/ClashDisplay-Semibold.otf"),
   });
 
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
   useEffect(() => {
-    if (loaded) {
+    Asset.loadAsync([
+      require("@/assets/images/LogoDifract.png"),
+      require("@/assets/images/onbo1.png"),
+      require("@/assets/images/onbo2.png"),
+      require("@/assets/images/onbo3.png"),
+      require("@/assets/images/onbo4.png"),
+      require("@/assets/images/onboChoix1.png"),
+      require("@/assets/images/onboChoix2.png"),
+      require("@/assets/images/onboar1.png"),
+      require("@/assets/images/onboar2.png"),
+      require("@/assets/images/onboar3.png"),
+      require("@/assets/images/Votes 3.png"),
+      require("@/assets/images/scene.png"),
+      require("@/assets/images/ImgLogin.png"),
+    ]).then(() => setImagesLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && imagesLoaded) {
       // Appliquer la police Area globalement à tous les Text et TextInput
       // @ts-ignore - defaultProps existe à runtime
       if (Text.defaultProps == null) Text.defaultProps = {};
@@ -51,32 +73,36 @@ export default function RootLayout() {
 
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded, imagesLoaded]);
 
-  if (!loaded) {
+  if (!fontsLoaded || !imagesLoaded) {
     return null;
   }
 
   return (
-    <AudioPlayerProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: "#000000" },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen
-            name="OnBoarding/onboarding"
-            options={{ gestureEnabled: false }}
-          />
-          <Stack.Screen name="Auth/Index" />
-          <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-        </Stack>
-        <GlobalAudioPlayer />
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </AudioPlayerProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AudioPlayerProvider>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "#000000" },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen
+              name="OnBoarding/onboarding"
+              options={{ gestureEnabled: false }}
+            />
+            <Stack.Screen name="Auth/Index" />
+            <Stack.Screen name="Auth/register-public" />
+            <Stack.Screen name="Auth/register-artist" />
+            <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+          </Stack>
+          <GlobalAudioPlayer />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AudioPlayerProvider>
+    </GestureHandlerRootView>
   );
 }

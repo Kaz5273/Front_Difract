@@ -1,10 +1,11 @@
 import { OnboardingButton } from "@/components/onboarding/onboarding-button";
 import { OnboardingPagination } from "@/components/onboarding/onboarding-pagination";
 import { OnboardingSlide } from "@/components/onboarding/onboarding-slide";
-import { ONBOARDING_SLIDES } from "@/constants/onboarding-data";
+import { ONBOARDING_SLIDES, UserRole } from "@/constants/onboarding-data";
+import { Fonts } from "@/constants/theme";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -14,14 +15,23 @@ import {
   View,
   ViewToken,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedRole, setSelectedRole] = useState<UserRole>("public");
   const flatListRef = useRef<FlatList>(null);
   const { completeOnboarding } = useOnboarding();
+
+  // Filtrer les slides : garder ceux sans forRole + ceux du rôle sélectionné
+  const slides = useMemo(
+    () =>
+      ONBOARDING_SLIDES.filter(
+        (s) => !s.forRole || s.forRole === selectedRole
+      ),
+    [selectedRole]
+  );
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -42,7 +52,7 @@ export default function OnboardingScreen() {
   }).current;
 
   const handleNext = () => {
-    if (currentIndex < ONBOARDING_SLIDES.length - 1) {
+    if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({
         index: currentIndex + 1,
         animated: true,
@@ -50,25 +60,47 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleSkip = async () => {
-    await completeOnboarding();
-    router.replace("/Auth/Index");
-  };
-
   const handleFinish = async () => {
     await completeOnboarding();
-    router.replace("/Auth/Index");
+    if (selectedRole === "public") {
+      router.replace("/Auth/register-public");
+    } else {
+      router.replace("/Auth/register-artist");
+    }
   };
 
-  const isLastSlide = currentIndex === ONBOARDING_SLIDES.length - 1;
+  const handleGuest = async () => {
+    await completeOnboarding();
+    router.replace("/(tabs)");
+  };
+
+  const isLastSlide = currentIndex === slides.length - 1;
+  const isWelcomeSlide = slides[currentIndex]?.type === "welcome";
+
+  const handleCreateAccount = () => {
+    // Aller au slide de choix public/artiste (index 1)
+    flatListRef.current?.scrollToIndex({
+      index: 1,
+      animated: true,
+    });
+  };
+
+  const handleLogin = () => {
+    router.push("/Auth/Login");
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={ONBOARDING_SLIDES}
+        data={slides}
         renderItem={({ item, index }) => (
-          <OnboardingSlide slide={item} index={index} />
+          <OnboardingSlide
+            slide={item}
+            index={index}
+            selectedRole={selectedRole}
+            onSelectRole={setSelectedRole}
+          />
         )}
         horizontal
         pagingEnabled
@@ -83,24 +115,40 @@ export default function OnboardingScreen() {
         snapToInterval={width}
         decelerationRate="fast"
       />
-      <View style={styles.footer}>
+      <View style={[styles.footer, isWelcomeSlide ? styles.footerWelcome : styles.footerDefault]}>
+        {isWelcomeSlide ? (
+          <>
+            <OnboardingButton
+              title="Créer un compte"
+              onPress={handleCreateAccount}
+              fullWidth
+            />
+            <OnboardingButton
+              title="Se connecter"
+              onPress={handleLogin}
+              fullWidth
+            />
+          </>
+        ) : (
+          <OnboardingButton
+            title={isLastSlide ? "C'est parti !" : "Suivant"}
+            onPress={isLastSlide ? handleFinish : handleNext}
+            fullWidth
+          />
+        )}
         <OnboardingPagination
-          totalSlides={ONBOARDING_SLIDES.length}
+          totalSlides={slides.length}
           currentIndex={currentIndex}
         />
-        <View style={styles.buttonsContainer}>
-          {!isLastSlide && (
-            <Pressable onPress={handleSkip} style={styles.skipButton}>
-              <Text style={styles.skipText}>Passer</Text>
-            </Pressable>
-          )}
-          <OnboardingButton
-            title={isLastSlide ? "Commencer" : "Suivant"}
-            onPress={isLastSlide ? handleFinish : handleNext}
-          />
-        </View>
+        {isWelcomeSlide && (
+          <Pressable onPress={handleGuest} style={styles.guestButton}>
+            <Text style={styles.guestText}>
+              Je continue en tant qu'invité
+            </Text>
+          </Pressable>
+        )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -113,23 +161,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footer: {
-    paddingHorizontal: 40,
-    paddingBottom: 70,
-    gap: 32,
-  },
-  buttonsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    gap: 20,
+    paddingHorizontal: 15,
+    gap: 10,
   },
-  skipButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  footerWelcome: {
+    paddingBottom: 80,
   },
-  skipText: {
-    color: "#999999",
-    fontSize: 16,
-    fontFamily: "Area-Regular",
+  footerDefault: {
+    paddingBottom: 127,
+  },
+  guestButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 79,
+  },
+  guestText: {
+    fontSize: 12,
+    fontFamily: Fonts.bold,
+    color: "rgba(255, 255, 255, 0.7)",
   },
 });

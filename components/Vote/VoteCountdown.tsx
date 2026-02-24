@@ -4,9 +4,10 @@ import { Fonts } from "@/constants/theme";
 
 interface VoteCountdownProps {
   endDate: Date;
+  compact?: boolean;
 }
 
-export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
+export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate, compact = false }) => {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -41,10 +42,14 @@ export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
   )}h ${formatNumber(timeLeft.minutes)}m ${formatNumber(timeLeft.seconds)}s`;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Temps restants avant la fin des votes</Text>
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      <Text style={[styles.label, compact && styles.labelCompact]}>
+        {compact ? "Temps restants" : "Temps restants avant la fin des votes"}
+      </Text>
       <View style={styles.timerBadge}>
-        <Text style={styles.timerText}>{timeString}</Text>
+        <Text style={[styles.timerText, compact && styles.timerTextCompact]}>
+          {timeString}
+        </Text>
       </View>
     </View>
   );
@@ -64,6 +69,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: -0.4,
     flex: 1,
+    
   },
   timerBadge: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -79,6 +85,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#FFFFFF",
     letterSpacing: -0.48,
+  },
+  containerCompact: {
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 0,
+  },
+  labelCompact: {
+    flex: 0,
+    fontSize: 14,
+    letterSpacing: -0.56,
+  },
+  timerTextCompact: {
+    fontSize: 14,
+    letterSpacing: -0.28,
+    
   },
 });
 

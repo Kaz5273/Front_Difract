@@ -58,7 +58,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="vote"
+          name="votes"
           options={{
             title: "Vote",
             tabBarIcon: ({ color }) => <IconVote color={color} />,

@@ -49,6 +49,11 @@ const exampleArtists = [
       // url: require("@/assets/videos/RickRoll.mp4"),
 
       // Ou utilisez une URL distante pour tester
+      // option permettant de tester avec un lien youtube directement
+    /*   videoClip: {
+      url: "https://www.youtube.com/watch?v=Aq5WXmQQooo&list=RDAq5WXmQQooo&start_radio=1",
+      type: "youtube" as "youtube" | "local",
+      thumbnail: "https://img.youtube.com/vi/Aq5WXmQQooo/maxresdefault.jpg", */
       url: require("@/assets/images/RickRoll.mp4"),
       type: "local" as "youtube" | "local",
       thumbnail:

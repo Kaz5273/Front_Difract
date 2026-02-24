@@ -27,16 +27,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+    paddingVertical: 13,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    width: 9,
+    height: 9,
+    borderRadius: 26,
+    backgroundColor: "#3D3D3D",
   },
   dotActive: {
-    width: 20,
     backgroundColor: "#FFFFFF",
   },
 });

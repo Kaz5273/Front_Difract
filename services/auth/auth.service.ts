@@ -7,12 +7,20 @@ import type {
 } from '../api/types';
 
 /**
- * Interface de réponse Laravel (ce que l'API renvoie réellement)
+ * Interface de réponse Laravel pour login et verify-email
  */
 interface LaravelAuthResponse {
   user: User;
   access_token: string;
   token_type: string;
+}
+
+/**
+ * Réponse du register (pas de token, juste un message + email)
+ */
+export interface RegisterResponse {
+  message: string;
+  email: string;
 }
 
 /**
@@ -28,21 +36,47 @@ export interface AuthResponse {
  */
 export const authService = {
   /**
-   * Inscription d'un nouvel utilisateur (route publique)
+   * Inscription — crée le compte + envoie un code de vérification par email
+   * Ne retourne PAS de token : il faut vérifier l'email d'abord
    */
-  register: async (data: RegisterCredentials): Promise<AuthResponse> => {
-    const response = await apiClient.post<LaravelAuthResponse>(
+  register: async (data: RegisterCredentials): Promise<RegisterResponse> => {
+    const response = await apiClient.post<RegisterResponse>(
       ENDPOINTS.REGISTER,
       data
     );
-    
+
     console.log('🔍 Register response:', response.data);
-    
-    // Mapper la réponse Laravel vers notre format
+    return response.data;
+  },
+
+  /**
+   * Vérifier le code email → retourne le token + user
+   */
+  verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
+    const response = await apiClient.post<LaravelAuthResponse>(
+      ENDPOINTS.VERIFY_EMAIL,
+      { email, code }
+    );
+
+    console.log('🔍 Verify email response:', response.data);
+
     return {
       token: response.data.access_token,
       user: response.data.user,
     };
+  },
+
+  /**
+   * Renvoyer un code de vérification
+   */
+  resendCode: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      ENDPOINTS.RESEND_CODE,
+      { email }
+    );
+
+    console.log('🔍 Resend code response:', response.data);
+    return response.data;
   },
 
   /**
@@ -53,9 +87,9 @@ export const authService = {
       ENDPOINTS.LOGIN,
       credentials
     );
-    
+
     console.log('🔍 Login response:', response.data);
-    
+
     // Mapper la réponse Laravel vers notre format
     return {
       token: response.data.access_token,

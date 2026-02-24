@@ -35,7 +35,7 @@ const AuthIndex = () => {
       </Pressable>
       <Pressable
         style={styles.buttonSecondary}
-        onPress={() => router.push("/Auth/register")}
+        onPress={() => router.push("/Auth/register-public")}
       >
         <Text style={styles.buttonTextSecondary}>Créer un compte</Text>
       </Pressable>

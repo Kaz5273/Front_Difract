@@ -19,16 +19,34 @@ export const userService = {
   },
 
   /**
-   * Upload d'avatar
+   * Upload photo de profil
    */
-  uploadAvatar: async (file: FormData): Promise<{ media_url: string }> => {
-    const response = await apiClient.post<{ media_url: string }>(
-      '/api/users/avatar',
+  uploadProfilePicture: async (file: FormData) => {
+    const response = await apiClient.post(
+      '/api/media/profile-picture',
       file,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000,
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Upload de tracks audio
+   */
+  uploadTracks: async (file: FormData) => {
+    const response = await apiClient.post(
+      '/api/media/tracks',
+      file,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000,
       }
     );
     return response.data;

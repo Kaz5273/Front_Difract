@@ -36,6 +36,7 @@ export const Fonts = {
   semiBold: 'Area-SemiBold',
   thin: 'Area-Thin',
   header: 'ClashDisplay-SemiBold',
+  normal: 'Area-Normal',
   
 };
 

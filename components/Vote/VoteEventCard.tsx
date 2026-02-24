@@ -12,6 +12,7 @@ interface VoteEventCardProps {
   dayNumber: string;
   month: string;
   onPress?: () => void;
+  showSeeMore?: boolean;
 }
 
 export const VoteEventCard: React.FC<VoteEventCardProps> = ({
@@ -22,6 +23,7 @@ export const VoteEventCard: React.FC<VoteEventCardProps> = ({
   dayNumber,
   month,
   onPress,
+  showSeeMore = true,
 }) => {
   return (
     <BlurView intensity={2} style={styles.container}>
@@ -49,11 +51,13 @@ export const VoteEventCard: React.FC<VoteEventCardProps> = ({
         </View>
 
         {/* Voir plus Button */}
-        <Pressable onPress={onPress}>
-          <BlurView intensity={15} style={styles.seeMoreButton}>
-            <Text style={styles.seeMoreText}>Voir plus</Text>
-          </BlurView>
-        </Pressable>
+        {showSeeMore && (
+          <Pressable onPress={onPress}>
+            <BlurView intensity={15} style={styles.seeMoreButton}>
+              <Text style={styles.seeMoreText}>Voir plus</Text>
+            </BlurView>
+          </Pressable>
+        )}
       </View>
     </BlurView>
   );

@@ -4,6 +4,8 @@
 export const ENDPOINTS = {
   // Auth
   REGISTER: '/api/register',
+  VERIFY_EMAIL: '/api/verify-email',
+  RESEND_CODE: '/api/resend-code',
   LOGIN: '/api/login',
   LOGOUT: '/api/logout',
   ME: '/api/me',
@@ -28,6 +30,13 @@ export const ENDPOINTS = {
 
   STYLES: '/api/styles',
   STYLE_BY_ID: (id: string | number) => `/api/styles/${id}`,
+
+  // Subscription
+  SUBSCRIPTION_CHECKOUT: '/api/subscription/checkout',
+  SUBSCRIPTION_STATUS: '/api/subscription/status',
+  SUBSCRIPTION_CANCEL: '/api/subscription/cancel',
+  SUBSCRIPTION_RESUME: '/api/subscription/resume',
+  SUBSCRIPTION_PORTAL: '/api/subscription/portal',
 } as const;
   
 

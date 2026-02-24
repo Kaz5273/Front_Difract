@@ -28,18 +28,18 @@ export function GlobalAudioPlayer({
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
-  // Ne pas afficher le player sur la page de détail de l'artiste (sauf si forceShow)
+  // Ne pas afficher le player sur certaines pages détail
   const isArtistDetailPage = pathname?.startsWith("/artist/");
   const isEventDetailPage = pathname?.startsWith("/event/");
+  const isVoteDetailPage = pathname?.startsWith("/vote/");
   const isDetailPage = isArtistDetailPage || isEventDetailPage;
-  // Ancienne méthode : if (!currentTrack) { return null; }
-  // Le player disparaît maintenant quand la musique n'est plus en lecture (pause ou stop)
+
   if (!currentTrack || !isPlaying) {
     return null;
   }
 
-  // Si on est sur la page artiste et que forceShow n'est pas activé, ne rien afficher
-  if (isArtistDetailPage && !forceShow) {
+  // Masquer sur la page artiste (sauf si forceShow) et sur la page vote detail
+  if ((isArtistDetailPage && !forceShow) || isVoteDetailPage) {
     return null;
   }
 

@@ -14,13 +14,16 @@ interface AuthState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   register: (
-    name: string, 
-    email: string, 
-    password: string, 
+    name: string,
+    email: string,
+    password: string,
     role?: 'PUBLIC' | 'ARTIST',
     primaryStyleId?: number | null,
-    secondaryStyleIds?: number[]
+    secondaryStyleIds?: number[],
+    bio?: string
   ) => Promise<void>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendCode: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   updateUser: (user: User) => void;
@@ -42,13 +45,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true, error: null });
       console.log('🔐 Attempting login...');
-      
+
       const response: AuthResponse = await authService.login({ email, password });
-      
+
       // Sauvegarder dans AsyncStorage
       await storage.saveToken(response.token);
       await storage.saveUser(response.user);
-      
+
       set({
         user: response.user,
         token: response.token,
@@ -56,38 +59,39 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
         error: null,
       });
-      
+
       console.log('✅ Login successful:', response.user.email);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erreur de connexion';
-      
+
       set({
         error: errorMessage,
         isLoading: false,
         isAuthenticated: false,
       });
-      
+
       console.error('❌ Login failed:', errorMessage);
       throw error;
     }
   },
 
   // ============================================
-  // REGISTER
+  // REGISTER (ne retourne plus de token)
   // ============================================
   register: async (name: string, email: string, password: string, role: 'PUBLIC' | 'ARTIST' = 'PUBLIC', primaryStyleId?: number | null,
-    secondaryStyleIds?: number[]) => {
+    secondaryStyleIds?: number[], bio?: string) => {
     try {
       set({ isLoading: true, error: null });
       console.log('📝 Attempting registration...');
-      
-          const payload: any = {
-      name,
-      email,
-      password,
-      password_confirmation: password,
-      role,
-    };
+
+      const payload: any = {
+        name,
+        email,
+        password,
+        password_confirmation: password,
+        role,
+      };
+
       if (role === 'ARTIST' && primaryStyleId) {
         payload.primary_style_id = primaryStyleId;
         payload.secondary_style_ids = secondaryStyleIds || [];
@@ -97,11 +101,41 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
       }
 
-       const response: AuthResponse = await authService.register(payload);
-      // Sauvegarder dans AsyncStorage
+      if (bio) {
+        payload.bio = bio;
+      }
+
+      await authService.register(payload);
+
+      set({ isLoading: false, error: null });
+
+      console.log('✅ Registration successful, verification code sent to:', email);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "Erreur d'inscription";
+
+      set({
+        error: errorMessage,
+        isLoading: false,
+      });
+
+      console.error('❌ Registration failed:', errorMessage);
+      throw error;
+    }
+  },
+
+  // ============================================
+  // VERIFY EMAIL (retourne le token + user)
+  // ============================================
+  verifyEmail: async (email: string, code: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      console.log('📧 Verifying email code...');
+
+      const response: AuthResponse = await authService.verifyEmail(email, code);
+
       await storage.saveToken(response.token);
       await storage.saveUser(response.user);
-      
+
       set({
         user: response.user,
         token: response.token,
@@ -109,18 +143,44 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
         error: null,
       });
-      
-      console.log('✅ Registration successful:', response.user.email);
+
+      console.log('✅ Email verified:', response.user.email);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "Erreur d'inscription";
-      
+      const errorMessage = error.response?.data?.errors?.code?.[0]
+        || error.response?.data?.message
+        || 'Code invalide ou expiré';
+
       set({
         error: errorMessage,
         isLoading: false,
-        isAuthenticated: false,
       });
-      
-      console.error('❌ Registration failed:', errorMessage);
+
+      console.error('❌ Email verification failed:', errorMessage);
+      throw error;
+    }
+  },
+
+  // ============================================
+  // RESEND CODE
+  // ============================================
+  resendCode: async (email: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      console.log('📨 Resending verification code...');
+
+      await authService.resendCode(email);
+
+      set({ isLoading: false, error: null });
+      console.log('✅ Verification code resent to:', email);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Impossible de renvoyer le code';
+
+      set({
+        error: errorMessage,
+        isLoading: false,
+      });
+
+      console.error('❌ Resend code failed:', errorMessage);
       throw error;
     }
   },
@@ -132,13 +192,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       console.log('🚪 Logging out...');
       set({ isLoading: true });
-      
-      // Appeler l'API de déconnexion
+
       await authService.logout();
-      
-      // Nettoyer le stockage local
       await storage.clearAll();
-      
+
       set({
         user: null,
         token: null,
@@ -146,14 +203,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
         error: null,
       });
-      
+
       console.log('✅ Logout successful');
     } catch (error) {
       console.error('❌ Logout error:', error);
-      
-      // Même en cas d'erreur, nettoyer le stockage
+
       await storage.clearAll();
-      
+
       set({
         user: null,
         token: null,
@@ -171,33 +227,31 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true });
       console.log('🔄 Loading user from storage...');
-      
+
       const token = await storage.getToken();
-      
+
       if (!token) {
         console.log('ℹ️ No token found');
         set({ isLoading: false, isAuthenticated: false });
         return;
       }
 
-      // Récupérer les données actuelles depuis l'API
       try {
         const user: User = await authService.me();
-        
+
         await storage.saveUser(user);
-        
+
         set({
           user,
           token,
           isAuthenticated: true,
           isLoading: false,
         });
-        
+
         console.log('✅ User loaded successfully:', user.email);
       } catch (error) {
-        // Si l'API échoue, utiliser les données en cache
         const savedUser = await storage.getUser();
-        
+
         if (savedUser) {
           set({
             user: savedUser,
@@ -207,7 +261,6 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
           console.log('⚠️ Using cached user data');
         } else {
-          // Token invalide
           await storage.clearAll();
           set({
             user: null,

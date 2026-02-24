@@ -1,52 +1,59 @@
+import { Fonts } from "@/constants/theme";
 import React from "react";
 import { Pressable, Text, StyleSheet } from "react-native";
+
+type ChipVariant =
+  | "outline"       // modal: non sélectionné (bordure noire, fond transparent)
+  | "selectedBlack" // modal: sélectionné (fond noir, texte blanc)
+  | "selectedWhite" // écran principal: style principal (fond blanc, texte noir)
+  | "selectedGray"; // écran principal: style secondaire (fond #a0a0a0, texte noir)
 
 interface StyleChipProps {
   id: number;
   name: string;
-  isSelected: boolean;
-  onPress: (id: number) => void;
+  onPress?: (id: number) => void;
   disabled?: boolean;
-  variant?: "primary" | "secondary";
+  variant?: ChipVariant;
 }
 
-/**
- * Composant représentant un chip de style musical
- */
 export function StyleChip({
   id,
   name,
-  isSelected,
   onPress,
   disabled = false,
-  variant = "primary",
+  variant = "outline",
 }: StyleChipProps) {
   const handlePress = () => {
-    if (!disabled) {
+    if (!disabled && onPress) {
       onPress(id);
     }
   };
 
+  const chipStyle = [
+    styles.chip,
+    variant === "outline" && styles.chipOutline,
+    variant === "selectedBlack" && styles.chipBlack,
+    variant === "selectedWhite" && styles.chipWhite,
+    variant === "selectedGray" && styles.chipGray,
+    disabled && styles.chipDisabled,
+  ];
+
+  const textStyle = [
+    styles.chipText,
+    variant === "outline" && styles.textOutline,
+    variant === "selectedBlack" && styles.textBlack,
+    variant === "selectedWhite" && styles.textWhite,
+    variant === "selectedGray" && styles.textGray,
+    disabled && styles.textDisabled,
+  ];
+
   return (
     <Pressable
-      style={[
-        styles.chip,
-        isSelected && styles.chipSelected,
-        disabled && styles.chipDisabled,
-        variant === "secondary" && styles.chipSecondary,
-      ]}
+      style={chipStyle}
       onPress={handlePress}
-      disabled={disabled}
+      disabled={disabled || !onPress}
     >
-      <Text
-        style={[
-          styles.chipText,
-          isSelected && styles.chipTextSelected,
-          disabled && styles.chipTextDisabled,
-        ]}
-      >
-        {name}
-      </Text>
+      <Text style={textStyle}>{name}</Text>
     </Pressable>
   );
 }
@@ -54,35 +61,54 @@ export function StyleChip({
 const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#f3f4f6",
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    marginRight: 8,
-    marginBottom: 8,
+    paddingVertical: 8,
+    borderRadius: 30,
   },
-  chipSecondary: {
-    marginRight: 8,
-    marginBottom: 8,
+
+  // Outline: bordure noire, fond transparent (modal - non sélectionné)
+  chipOutline: {
+    borderWidth: 1,
+    borderColor: "#000000",
+    backgroundColor: "transparent",
   },
-  chipSelected: {
-    backgroundColor: "#6366f1",
-    borderColor: "#6366f1",
+  textOutline: {
+    color: "#000000",
   },
+
+  // Noir: fond noir, texte blanc (modal - sélectionné)
+  chipBlack: {
+    backgroundColor: "#000000",
+  },
+  textBlack: {
+    color: "#FFFFFF",
+  },
+
+  // Blanc: fond blanc, texte noir (écran principal - style principal)
+  chipWhite: {
+    backgroundColor: "#FFFFFF",
+  },
+  textWhite: {
+    color: "#000000",
+  },
+
+  // Gris: fond gris, texte noir (écran principal - styles secondaires)
+  chipGray: {
+    backgroundColor: "#a0a0a0",
+  },
+  textGray: {
+    color: "#000000",
+  },
+
   chipDisabled: {
-    opacity: 0.5,
-    backgroundColor: "#f9fafb",
+    opacity: 0.4,
   },
+
   chipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
   },
-  chipTextSelected: {
-    color: "#ffffff",
-  },
-  chipTextDisabled: {
+
+  textDisabled: {
     color: "#9ca3af",
   },
 });

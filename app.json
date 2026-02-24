@@ -30,13 +30,12 @@
         "expo-font",
         {
           "fonts": [
-             "./assets/fonts/Area-Black.otf",
-               "./assets/fonts/Area-Bold.otf",
-               "./assets/fonts/Area-ExtraBold.otf",
-               "./assets/fonts/Area-SemiBold.otf",
-               "./assets/fonts/Area-Thin.otf",  
-              "./assets/fonts/ClashDisplay-Regular.otf"
-            
+            "./assets/fonts/Area-Black.otf",
+            "./assets/fonts/Area-Bold.otf",
+            "./assets/fonts/Area-ExtraBold.otf",
+            "./assets/fonts/Area-SemiBold.otf",
+            "./assets/fonts/Area-Thin.otf",
+            "./assets/fonts/ClashDisplay-Regular.otf"
           ]
         }
       ],
@@ -52,8 +51,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
-      
+      ],
+      "expo-audio",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
