@@ -1,4 +1,5 @@
 import type { ChoiceOption, UserRole } from '@/constants/onboarding-data';
+import { Fonts } from '@/constants/theme';
 import React from 'react';
 import {
   Dimensions,
@@ -27,19 +28,21 @@ const SPRING_CONFIG = {
 
 interface OnboardingChoiceSlideProps {
   choices: ChoiceOption[];
-  selectedRole: UserRole;
+  selectedRole: UserRole | null;
   onSelectRole: (role: UserRole) => void;
 }
 
 function ChoiceCard({
   choice,
   isSelected,
+  hasSelection,
   rotation,
   offsetX,
   onPress,
 }: {
   choice: ChoiceOption;
   isSelected: boolean;
+  hasSelection: boolean;
   rotation: number;
   offsetX: number;
   onPress: () => void;
@@ -59,12 +62,17 @@ function ChoiceCard({
   }));
 
   const textOpacity = useAnimatedStyle(() => ({
-    opacity: withSpring(isSelected ? 1 : 0.5, SPRING_CONFIG),
+    opacity: withSpring(isSelected || !hasSelection ? 1 : 0.5, SPRING_CONFIG),
+  }));
+
+  const borderStyle = useAnimatedStyle(() => ({
+    borderWidth: withTiming(isSelected ? 2 : 0, { duration: 200 }),
+    borderColor: '#FFFFFF',
   }));
 
   return (
     <Pressable onPress={onPress} style={{ marginHorizontal: offsetX, zIndex: isSelected ? 2 : 1 }}>
-      <Animated.View style={[styles.card, animatedStyle]}>
+      <Animated.View style={[styles.card, animatedStyle, borderStyle]}>
         <ImageBackground
           source={choice.image}
           style={styles.cardImage}
@@ -91,7 +99,7 @@ export function OnboardingChoiceSlide({
   selectedRole,
   onSelectRole,
 }: OnboardingChoiceSlideProps) {
-  const selectedChoice = choices.find((c) => c.role === selectedRole) ?? choices[0];
+  const hasSelection = selectedRole !== null;
 
   const firstBgOpacity = useAnimatedStyle(() => ({
     opacity: withTiming(selectedRole === choices[0].role ? 0.15 : 0, { duration: 250 }),
@@ -103,7 +111,6 @@ export function OnboardingChoiceSlide({
 
   return (
     <View style={styles.container}>
-      {/* Les deux backgrounds sont toujours montés, on anime juste l'opacité */}
       <Animated.Image
         source={choices[0].image}
         style={[styles.absoluteBg, firstBgOpacity]}
@@ -116,21 +123,21 @@ export function OnboardingChoiceSlide({
       />
 
       <View style={styles.content}>
-        <Text style={styles.title}>
-          {selectedChoice.slideTitle.map((part, i) => (
-            <Text
-              key={i}
-              style={part.bold ? styles.boldText : styles.regularText}
-            >
-              {part.text}
-            </Text>
-          ))}
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>
+            <Text style={styles.regularText}>Choisissez </Text>
+            <Text style={styles.boldText}>qui vous êtes</Text>
+          </Text>
+          <Text style={styles.subtitle}>
+            Cliquez sur la carte qui vous correspond !
+          </Text>
+        </View>
 
         <View style={styles.cardsContainer}>
           <ChoiceCard
             choice={choices[0]}
             isSelected={selectedRole === choices[0].role}
+            hasSelection={hasSelection}
             rotation={-10}
             offsetX={-10}
             onPress={() => onSelectRole(choices[0].role)}
@@ -138,6 +145,7 @@ export function OnboardingChoiceSlide({
           <ChoiceCard
             choice={choices[1]}
             isSelected={selectedRole === choices[1].role}
+            hasSelection={hasSelection}
             rotation={7.5}
             offsetX={-10}
             onPress={() => onSelectRole(choices[1].role)}
@@ -162,21 +170,32 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 150,
+    paddingTop: 100,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginBottom: 60,
   },
   title: {
     fontSize: 25,
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -1,
-    width: 310,
-    marginBottom: 100,
+    width: 305,
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: '#b8b8b8',
+    letterSpacing: -0.42,
+    lineHeight: 18,
   },
   regularText: {
-    fontFamily: 'Area-ExtraBold',
+    fontFamily: Fonts.bold,
   },
   boldText: {
-    fontFamily: 'Area-Bold',
+    fontFamily: Fonts.regular,
   },
   cardsContainer: {
     flexDirection: 'row',

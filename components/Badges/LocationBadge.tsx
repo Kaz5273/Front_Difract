@@ -14,7 +14,7 @@ export const LocationBadge: React.FC<LocationBadgeProps> = ({
 }) => {
   const content = (
     <View style={styles.container}>
-      <MapPin size={18} color="#FFFFFF" strokeWidth={2} />
+      <MapPin size={20} color="#FFFFFF" strokeWidth={2} />
       <Text style={styles.locationText}>{location}</Text>
     </View>
   );
@@ -38,18 +38,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 11,
-    backgroundColor: "#343434",
-    borderRadius: 30,
+    gap: 8,
+    padding: 8,
+    backgroundColor: "#212121",
+    borderRadius: 25,
   },
   locationText: {
-    fontFamily: Fonts.extraBold,
-    fontSize: 11,
+    fontFamily: Fonts.regular,
+    fontSize: 12,
     color: "#FFFFFF",
     textAlign: "center",
-    letterSpacing: -0.44,
+    letterSpacing: -0.24,
   },
 });
 

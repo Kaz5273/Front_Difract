@@ -4,12 +4,10 @@ import {
   StyleSheet,
   Pressable,
   ImageBackground,
-  Text,
-  Linking,
-  Alert,
   Modal,
 } from "react-native";
 import { Play, X } from "lucide-react-native";
+import * as WebBrowser from "expo-web-browser";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -41,26 +39,13 @@ export function VideoClip({
   // Fonction pour ouvrir la vidéo
   const handleOpenVideo = async () => {
     if (videoType === "youtube") {
-      // Ouvrir YouTube dans le navigateur/app
-      try {
-        const videoUrlString = String(videoUrl);
-        const supported = await Linking.canOpenURL(videoUrlString);
-
-        if (supported) {
-          await Linking.openURL(videoUrlString);
-        } else {
-          Alert.alert(
-            "Erreur",
-            "Impossible d'ouvrir cette vidéo. Veuillez vérifier que vous avez une application compatible installée."
-          );
-        }
-      } catch (error) {
-        Alert.alert(
-          "Erreur",
-          "Une erreur s'est produite lors de l'ouverture de la vidéo."
-        );
-        console.error("Error opening video:", error);
-      }
+      // Ouvrir YouTube dans un navigateur in-app (même style que Lemon Squeezy)
+      await WebBrowser.openBrowserAsync(String(videoUrl), {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FORM_SHEET,
+        dismissButtonStyle: "close",
+        toolbarColor: "#080808",
+        controlsColor: "#FFFFFF",
+      });
     } else {
       // Ouvrir la vidéo locale dans un modal
       setShowVideoModal(true);
@@ -97,7 +82,7 @@ export function VideoClip({
         </Pressable>
       </View>
 
-      {/* Modal pour la vidéo locale */}
+      {/* Modal pour la vidéo locale uniquement */}
       {videoType === "local" && (
         <Modal
           visible={showVideoModal}

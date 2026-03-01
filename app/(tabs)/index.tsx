@@ -318,6 +318,8 @@ const styles = StyleSheet.create({
     width: 355,
   },
   locationContainer: {
+    flexDirection: "row",
+    alignSelf: "center",
     paddingHorizontal: 20,
     marginBottom: 10,
   },

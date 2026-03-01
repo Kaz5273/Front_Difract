@@ -1,78 +1,76 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAudioPlayer as useExpoAudioPlayer } from "expo-audio";
 import {
   ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-  ListFilter,
+  EllipsisVertical,
+  ArrowDownUp,
 } from "lucide-react-native";
+import { BlurView } from "expo-blur";
 import { Fonts } from "@/constants/theme";
 import { VoteCountdown } from "@/components/Vote/VoteCountdown";
-import { VoteEventCard } from "@/components/Vote/VoteEventCard";
 import {
   VoteArtistCarousel,
   CarouselArtist,
 } from "@/components/Vote/VoteArtistCarousel";
 import { VoteTrackPlayer } from "@/components/Vote/VoteTrackPlayer";
 
-// Musique de test (même fichier pour tous les artistes en mock)
-const TEST_MUSIC = require("@/musiqueTest/1 BAKERSFIELD.wav");
+// Musiques locales de test — à remplacer par l'API
+const TRACK_BAKERSFIELD = require("@/musiqueTest/1 BAKERSFIELD.wav");
+const TRACK_LIFE_IS_COOL = require("@/musiqueTest/6-LIFE-IS-COOL.mp3");
 
 // Données mock — à remplacer par l'API
 const mockArtists: CarouselArtist[] = [
   {
     id: "1",
     name: "Choi",
-    votes: 132,
-    rank: 4,
+    votes: 124,
+    rank: 1,
     imageUrl:
       "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
-    styles: ["Folk", "Indie", "Rock", "Pop"],
-    track: { title: "Road to hell", duration: "3:45" },
+    styles: ["Techno", "House", "Minimal", "Ambient", "Electro", "Trance"],
+    track: { title: "Bakersfield", duration: "4:34" },
   },
   {
     id: "2",
     name: "Luna",
     votes: 156,
-    rank: 1,
+    rank: 2,
     imageUrl:
       "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=600&fit=crop",
     styles: ["Jazz", "Soul", "R&B"],
-    track: { title: "Midnight blue", duration: "4:12" },
+    track: { title: "Life is cool", duration: "4:12" },
   },
   {
     id: "3",
     name: "Nova",
     votes: 98,
-    rank: 2,
+    rank: 3,
     imageUrl:
       "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=600&fit=crop",
     styles: ["Electronic", "House"],
-    track: { title: "Pulse wave", duration: "3:30" },
+    track: { title: "Bakersfield", duration: "3:30" },
   },
   {
     id: "4",
     name: "Echo",
     votes: 76,
-    rank: 3,
+    rank: 4,
     imageUrl:
       "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=600&fit=crop",
     styles: ["Rock", "Alternative"],
-    track: { title: "Fading lights", duration: "4:01" },
+    track: { title: "Life is cool", duration: "4:01" },
   },
 ];
 
-const mockEvent = {
-  eventName: "Espace rencontre",
-  location: "Annecy-le-vieux",
-  distance: "150km",
-  dayOfWeek: "ven.",
-  dayNumber: "06",
-  month: "juin",
-};
 
 export default function VoteDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -81,117 +79,160 @@ export default function VoteDetailScreen() {
   const [progress, setProgress] = useState(0);
   const [playingArtistId, setPlayingArtistId] = useState<string | null>(null);
 
-  const player = useExpoAudioPlayer(TEST_MUSIC);
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // One player per unique audio source
+  const playerBakersfield = useExpoAudioPlayer(TRACK_BAKERSFIELD);
+  const playerLifeIsCool = useExpoAudioPlayer(TRACK_LIFE_IS_COOL);
+
+  const players: Record<string, ReturnType<typeof useExpoAudioPlayer>> = useMemo(
+    () => ({
+      "1": playerBakersfield,
+      "2": playerLifeIsCool,
+      "3": playerBakersfield,
+      "4": playerLifeIsCool,
+    }),
+    [playerBakersfield, playerLifeIsCool]
+  );
+
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedArtistIdRef = useRef<string | null>(null);
+  const activePlayerRef = useRef<ReturnType<typeof useExpoAudioPlayer> | null>(null);
 
   const currentArtist = mockArtists[currentIndex];
 
   // Date de fin des votes (mock)
-  const voteEndDate = new Date();
-  voteEndDate.setDate(voteEndDate.getDate() + 1);
-  voteEndDate.setHours(voteEndDate.getHours() + 3);
-  voteEndDate.setMinutes(voteEndDate.getMinutes() + 39);
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-      // Le player expo-audio se cleanup automatiquement au unmount du hook
-    };
+  const voteEndDate = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    date.setHours(date.getHours() + 3);
+    date.setMinutes(date.getMinutes() + 39);
+    return date;
   }, []);
 
-  // Stop and reset when changing artist
-  useEffect(() => {
-    stopAudio();
-  }, [currentIndex]);
+  // Get the player for a given artist
+  const getPlayer = useCallback(
+    (artistId: string) => players[artistId] ?? playerBakersfield,
+    [players, playerBakersfield]
+  );
 
-  const stopAudio = useCallback(() => {
+  const stopProgressTracking = useCallback(() => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    try {
-      player.pause();
-      player.seekTo(0);
-    } catch (e) {
-      // Player might not be ready yet
-    }
-    setPlayingArtistId(null);
-    setProgress(0);
-    loadedArtistIdRef.current = null;
-  }, [player]);
+  }, []);
 
   const startProgressTracking = useCallback(() => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-    }
+    stopProgressTracking();
     progressIntervalRef.current = setInterval(() => {
-      if (player.duration > 0) {
-        const currentProgress = player.currentTime / player.duration;
-        setProgress(currentProgress);
+      const p = activePlayerRef.current;
+      if (!p || p.duration <= 0) return;
 
-        // Auto-stop when track ends
-        if (!player.playing && player.currentTime >= player.duration - 0.1) {
-          setPlayingArtistId(null);
-          setProgress(0);
-          player.seekTo(0);
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-          }
-        }
+      const currentProgress = p.currentTime / p.duration;
+      setProgress(currentProgress);
+
+      if (!p.playing && p.currentTime >= p.duration - 0.1) {
+        setPlayingArtistId(null);
+        setProgress(0);
+        p.seekTo(0);
+        stopProgressTracking();
       }
     }, 250);
-  }, [player]);
+  }, [stopProgressTracking]);
+
+  // Cancel any pending play timer
+  const cancelPlayTimer = useCallback(() => {
+    if (playTimerRef.current) {
+      clearTimeout(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+  }, []);
+
+  // Stop the currently active player
+  const stopActivePlayer = useCallback(() => {
+    if (activePlayerRef.current) {
+      try {
+        activePlayerRef.current.pause();
+        activePlayerRef.current.seekTo(0);
+      } catch (_) {}
+    }
+  }, []);
+
+  // Central function: transition to a given artist's track
+  const transitionTo = useCallback(
+    (artistId: string) => {
+      cancelPlayTimer();
+      stopProgressTracking();
+      stopActivePlayer();
+
+      const nextPlayer = getPlayer(artistId);
+      activePlayerRef.current = nextPlayer;
+      loadedArtistIdRef.current = artistId;
+      setPlayingArtistId(artistId);
+      setProgress(0);
+      nextPlayer.seekTo(0);
+      playTimerRef.current = setTimeout(() => {
+        nextPlayer.play();
+        startProgressTracking();
+      }, 50);
+    },
+    [getPlayer, cancelPlayTimer, stopProgressTracking, stopActivePlayer, startProgressTracking]
+  );
+
+  // Cleanup all timers + stop player on unmount
+  useEffect(() => {
+    return () => {
+      cancelPlayTimer();
+      stopProgressTracking();
+      stopActivePlayer();
+    };
+  }, [cancelPlayTimer, stopProgressTracking, stopActivePlayer]);
 
   const handlePlayPress = useCallback(
     (artistId: string) => {
-      // Même artiste chargé : toggle pause/play (reprend où on en était)
-      if (loadedArtistIdRef.current === artistId) {
-        if (player.playing) {
-          player.pause();
+      const p = getPlayer(artistId);
+
+      // Same artist: toggle play/pause
+      if (loadedArtistIdRef.current === artistId && activePlayerRef.current === p) {
+        if (p.playing) {
+          p.pause();
           setPlayingArtistId(null);
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-          }
+          stopProgressTracking();
         } else {
-          player.play();
+          p.play();
           setPlayingArtistId(artistId);
           startProgressTracking();
         }
         return;
       }
 
-      // Nouvel artiste : stop l'ancien, charge et joue depuis le début
-      stopAudio();
-
-      try {
-        player.seekTo(0);
-        player.play();
-        setPlayingArtistId(artistId);
-        loadedArtistIdRef.current = artistId;
-        setProgress(0);
-        startProgressTracking();
-      } catch (error) {
-        console.error("Erreur lecture audio:", error);
-      }
+      // Different artist: transition
+      transitionTo(artistId);
     },
-    [stopAudio, startProgressTracking, player]
+    [getPlayer, transitionTo, startProgressTracking, stopProgressTracking]
+  );
+
+  // When scroll settles: play the landed-on artist
+  const handleScrollEnd = useCallback(
+    (index: number) => {
+      const artist = mockArtists[index];
+      if (!artist) return;
+      transitionTo(artist.id);
+    },
+    [transitionTo]
   );
 
   const handleSeek = useCallback(
     (ratio: number) => {
-      if (player.duration > 0) {
-        player.seekTo(ratio * player.duration);
+      const p = activePlayerRef.current;
+      if (p && p.duration > 0) {
+        p.seekTo(ratio * p.duration);
         setProgress(ratio);
       }
     },
-    [player]
+    []
   );
 
   const handleVote = useCallback(() => {
@@ -202,6 +243,20 @@ export default function VoteDetailScreen() {
     router.push(`/artist/${currentArtist.id}`);
   }, [currentArtist]);
 
+  // Format current playback time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const activePlayer = activePlayerRef.current;
+  const activeDuration = activePlayer?.duration ?? 0;
+  const currentTimeStr =
+    activeDuration > 0 ? formatTime(progress * activeDuration) : "0:00";
+  const durationStr =
+    activeDuration > 0 ? formatTime(activeDuration) : "0:00";
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -211,86 +266,67 @@ export default function VoteDetailScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          {/* Back button */}
-          <Pressable onPress={() => router.back()} style={styles.iconButton}>
+          <Pressable onPress={() => router.back()} style={styles.headerButton}>
             <ChevronLeft size={20} color="#FFFFFF" />
           </Pressable>
 
-          {/* Navigation arrows */}
-{/*           <View style={styles.navArrows}>
-            <Pressable
-              onPress={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-              style={[
-                styles.iconButton,
-                currentIndex === 0 && styles.iconButtonDisabled,
-              ]}
-              disabled={currentIndex === 0}
-            >
-              <ChevronLeft size={20} color="#FFFFFF" />
-            </Pressable>
-            <Pressable
-              onPress={() =>
-                setCurrentIndex(
-                  Math.min(mockArtists.length - 1, currentIndex + 1)
-                )
-              }
-              style={[
-                styles.iconButton,
-                currentIndex === mockArtists.length - 1 &&
-                  styles.iconButtonDisabled,
-              ]}
-              disabled={currentIndex === mockArtists.length - 1}
-            >
-              <ChevronRight size={20} color="#FFFFFF" />
-            </Pressable>
-          </View> */}
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              Espace rencontre
+            </Text>
+            <Text style={styles.headerSubtitle}>En savoir plus</Text>
+          </View>
 
-          {/* Sort & Filter */}
-          <View style={styles.headerActions}>
-            <Pressable style={styles.iconButton}>
-              <ArrowUpDown size={20} color="#FFFFFF" />
-            </Pressable>
-            <Pressable style={styles.iconButton}>
-              <ListFilter size={20} color="#FFFFFF" />
+          <Pressable style={styles.headerButtonRight}>
+            <EllipsisVertical size={20} color="#FFFFFF" />
+          </Pressable>
+        </View>
+
+        {/* Countdown row */}
+        <View style={styles.countdownRow}>
+          <Text style={styles.countdownLabel}>Fin des votes :</Text>
+          <VoteCountdown endDate={voteEndDate} />
+        </View>
+
+        {/* Carousel Section: Rank + Carousel + Player */}
+        <View style={styles.carouselSection}>
+          {/* Rank pill + Sort button */}
+          <View style={styles.rankRow}>
+            <View style={styles.rankSpacer} />
+
+            <BlurView intensity={7} tint="dark" style={styles.rankPill}>
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankText}>#{currentArtist.rank}</Text>
+              </View>
+              <Text style={styles.rankVotes}>
+                {currentArtist.votes} votes
+              </Text>
+            </BlurView>
+
+            <Pressable style={styles.sortButton}>
+              <ArrowDownUp size={20} color="#FFFFFF" />
             </Pressable>
           </View>
-        </View>
 
-        {/* Countdown */}
-        <View style={styles.countdownContainer}>
-          <VoteCountdown endDate={voteEndDate} compact />
-        </View>
-
-        {/* Event Info */}
-        <View style={styles.eventContainer}>
-          <VoteEventCard
-            eventName={mockEvent.eventName}
-            location={mockEvent.location}
-            distance={mockEvent.distance}
-            dayOfWeek={mockEvent.dayOfWeek}
-            dayNumber={mockEvent.dayNumber}
-            month={mockEvent.month}
-            showSeeMore={false}
+          {/* Artist Carousel */}
+          <VoteArtistCarousel
+            artists={mockArtists}
+            currentIndex={currentIndex}
+            onIndexChange={setCurrentIndex}
+            onScrollEnd={handleScrollEnd}
+            playingArtistId={playingArtistId}
+            onPlayPress={handlePlayPress}
           />
-        </View>
 
-        {/* Artist Carousel */}
-        <VoteArtistCarousel
-          artists={mockArtists}
-          currentIndex={currentIndex}
-          onIndexChange={setCurrentIndex}
-          playingArtistId={playingArtistId}
-          onPlayPress={handlePlayPress}
-        />
-
-        {/* Track Player */}
-        <View style={styles.trackPlayerContainer}>
-          <VoteTrackPlayer
-            artistName={currentArtist.name}
-            trackTitle={currentArtist.track.title}
-            progress={progress}
-            onSeek={handleSeek}
-          />
+          {/* Track Player */}
+          <View style={styles.trackPlayerContainer}>
+            <VoteTrackPlayer
+              currentTime={currentTimeStr}
+              duration={durationStr}
+              progress={progress}
+              onSeek={handleSeek}
+            />
+          </View>
         </View>
 
         {/* Action Buttons */}
@@ -310,67 +346,144 @@ export default function VoteDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#080808",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 20,
+    paddingVertical: 20,
     paddingBottom: 40,
-    gap: 10,
+    gap: 48,
   },
 
   // Header
   header: {
-    
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 10,
-    height: 46,
+    paddingHorizontal: 16,
+    height: 44,
+    
   },
-  iconButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#323232",
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#212121",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingRight: 2, // Visual centering for the left chevron
+  },
+  headerButtonRight: {
+     width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#212121",
     justifyContent: "center",
     alignItems: "center",
   },
-  iconButtonDisabled: {
-    opacity: 0.3,
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+
   },
-  navArrows: {
-    flexDirection: "row",
-    gap: 8,
+  headerTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
+    color: "#FFFFFF",
+    letterSpacing: -0.64,
   },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
+  headerSubtitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 12,
+    color: "#848484",
+    letterSpacing: -0.48,
   },
 
   // Countdown
-  countdownContainer: {
-    paddingHorizontal: 20,
+  countdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  countdownLabel: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#FFFFFF",
+    letterSpacing: -0.56,
   },
 
-  // Event
-  eventContainer: {
-    paddingHorizontal: 10,
+  // Rank row
+  rankRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    gap: 18,
+  },
+  rankSpacer: {
+    width: 40,
+  },
+  rankPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 40,
+    paddingLeft: 4,
+    paddingRight: 8,
+    borderRadius: 25,
+    overflow: "hidden",
+    backgroundColor: "#1D1C1B",
+  },
+  rankBadge: {
+    width: 33,
+    height: 32,
+    borderRadius: 24,
+    backgroundColor: "#383838",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rankText: {
+    fontFamily: Fonts.extraBold,
+    fontSize: 14,
+    color: "#FFFFFF",
+    letterSpacing: -0.28,
+  },
+  rankVotes: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: "#FFFFFF",
+    letterSpacing: -0.28,
+  },
+  sortButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 30,
+    backgroundColor: "#212121",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Carousel section (rank + carousel + player)
+  carouselSection: {
+    gap: 16,
+    alignItems: "center",
   },
 
   // Track Player
   trackPlayerContainer: {
+    width: "100%",
     paddingHorizontal: 20,
-    alignItems: "center",
+    marginTop: 8,
   },
 
   // Buttons
   buttonsContainer: {
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 26,
   },
   voteButton: {
     backgroundColor: "#FFFFFF",
@@ -379,25 +492,26 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
   },
   voteButtonText: {
-    fontFamily: Fonts.extraBold,
+    fontFamily: Fonts.regular,
     fontSize: 14,
     color: "#000000",
-    letterSpacing: -0.56,
+    letterSpacing: -0.28,
   },
   profileButton: {
-    backgroundColor: "#000000",
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
   },
   profileButtonText: {
     fontFamily: Fonts.regular,
     fontSize: 14,
     color: "#FFFFFF",
-    letterSpacing: -0.56,
+    letterSpacing: -0.28,
   },
 });

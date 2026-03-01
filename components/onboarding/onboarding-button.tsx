@@ -7,20 +7,24 @@ interface OnboardingButtonProps {
   onPress: () => void;
   variant?: 'primary' | 'secondary';
   fullWidth?: boolean;
+  disabled?: boolean;
 }
 
-export function OnboardingButton({ title, onPress, variant = 'primary', fullWidth }: OnboardingButtonProps) {
+export function OnboardingButton({ title, onPress, variant = 'primary', fullWidth, disabled }: OnboardingButtonProps) {
   return (
     <Pressable
       style={[
         styles.button,
         variant === 'secondary' && styles.buttonSecondary,
         fullWidth && styles.fullWidth,
+        disabled && styles.buttonDisabled,
       ]}
-      onPress={onPress}>
+      onPress={onPress}
+      disabled={disabled}>
       <Text style={[
         styles.buttonText,
         variant === 'secondary' && styles.buttonTextSecondary,
+        disabled && styles.buttonTextDisabled,
       ]}>
         {title}
       </Text>
@@ -44,14 +48,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
+  buttonDisabled: {
+    backgroundColor: '#9e9e9e',
+  },
   buttonText: {
     color: '#000000',
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: Fonts.regular,
-    letterSpacing: -0.6,
+    letterSpacing: -0.28,
   },
   buttonTextSecondary: {
     color: '#FFFFFF',
+  },
+  buttonTextDisabled: {
+    color: '#6c6c6c',
   },
   fullWidth: {
     width: '100%',

@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 15,
+    gap: 16,
     paddingHorizontal: 20,
   },
   tab: {

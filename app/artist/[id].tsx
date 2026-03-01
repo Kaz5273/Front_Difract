@@ -54,10 +54,13 @@ const exampleArtists = [
       url: "https://www.youtube.com/watch?v=Aq5WXmQQooo&list=RDAq5WXmQQooo&start_radio=1",
       type: "youtube" as "youtube" | "local",
       thumbnail: "https://img.youtube.com/vi/Aq5WXmQQooo/maxresdefault.jpg", */
-      url: require("@/assets/images/RickRoll.mp4"),
+      url: "https://www.youtube.com/watch?v=Aq5WXmQQooo&list=RDAq5WXmQQooo&start_radio=1",
+      type: "youtube" as "youtube" | "local",
+      thumbnail: "https://img.youtube.com/vi/Aq5WXmQQooo/maxresdefault.jpg",
+      /* url: require("@/assets/images/RickRoll.mp4"),
       type: "local" as "youtube" | "local",
       thumbnail:
-        "https://platform.theverge.com/wp-content/uploads/sites/2/chorus/uploads/chorus_asset/file/22312759/rickroll_4k.jpg?quality=90&strip=all&crop=0,10.749448450723,100,78.501103098554",
+        "https://platform.theverge.com/wp-content/uploads/sites/2/chorus/uploads/chorus_asset/file/22312759/rickroll_4k.jpg?quality=90&strip=all&crop=0,10.749448450723,100,78.501103098554", */
     },
   },
 ];

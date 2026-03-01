@@ -42,7 +42,7 @@ export const Fonts = {
 
 export const Typography = {
   h1: {
-    fontFamily: Fonts.extraBold,
+    fontFamily: Fonts.regular,
     fontSize: 20,
     lineHeight: 20,
     letterSpacing: -0.8,

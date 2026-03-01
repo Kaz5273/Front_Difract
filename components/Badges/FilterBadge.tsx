@@ -9,7 +9,7 @@ interface FilterBadgeProps {
 
 export const FilterBadge: React.FC<FilterBadgeProps> = ({
   onPress,
-  size = 15,
+  size = 20,
 }) => {
   const content = (
     <View style={styles.container}>
@@ -36,10 +36,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 10,
-    backgroundColor: "#343434",
+    backgroundColor: "#212121",
     borderRadius: 25,
-    width: 40,
-    height: 30,
   },
 });
 

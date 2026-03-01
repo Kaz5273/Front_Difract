@@ -18,13 +18,24 @@ import {
 
 const { width } = Dimensions.get("window");
 
+const CHOICE_DESCRIPTIONS: Record<UserRole, string> = {
+  public:
+    "Vous allez utiliser Difract en tant que public, vous voterez pour des artistes et vous pourrez participer à des événements !",
+  artist:
+    "Vous allez utiliser Difract en tant qu'artiste, vous pourrez postuler à des événements et réalisez votre rêve !",
+};
+
+const CHOICE_BUTTON_LABELS: Record<UserRole, string> = {
+  public: "Je suis un public !",
+  artist: "Je suis un artiste !",
+};
+
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedRole, setSelectedRole] = useState<UserRole>("public");
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const { completeOnboarding } = useOnboarding();
 
-  // Filtrer les slides : garder ceux sans forRole + ceux du rôle sélectionné
   const slides = useMemo(
     () =>
       ONBOARDING_SLIDES.filter(
@@ -76,9 +87,9 @@ export default function OnboardingScreen() {
 
   const isLastSlide = currentIndex === slides.length - 1;
   const isWelcomeSlide = slides[currentIndex]?.type === "welcome";
+  const isChoiceSlide = slides[currentIndex]?.type === "choice";
 
   const handleCreateAccount = () => {
-    // Aller au slide de choix public/artiste (index 1)
     flatListRef.current?.scrollToIndex({
       index: 1,
       animated: true,
@@ -87,6 +98,78 @@ export default function OnboardingScreen() {
 
   const handleLogin = () => {
     router.push("/Auth/Login");
+  };
+
+  const renderFooter = () => {
+    if (isWelcomeSlide) {
+      return (
+        <View style={[styles.footer, styles.footerWelcome]}>
+          <OnboardingButton
+            title="Créer un compte"
+            onPress={handleCreateAccount}
+            fullWidth
+          />
+          <OnboardingButton
+            title="Se connecter"
+            onPress={handleLogin}
+            fullWidth
+          />
+          <OnboardingPagination
+            totalSlides={slides.length}
+            currentIndex={currentIndex}
+          />
+          <Pressable onPress={handleGuest} style={styles.guestButton}>
+            <Text style={styles.guestText}>
+              Je continue en tant qu'invité
+            </Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (isChoiceSlide) {
+      return (
+        <View style={[styles.footer, styles.footerChoice]}>
+          {selectedRole ? (
+            <>
+              <Text style={styles.choiceDescription}>
+                {CHOICE_DESCRIPTIONS[selectedRole]}
+              </Text>
+              <OnboardingButton
+                title={CHOICE_BUTTON_LABELS[selectedRole]}
+                onPress={handleNext}
+                fullWidth
+              />
+            </>
+          ) : (
+            <OnboardingButton
+              title="Suivant"
+              onPress={() => {}}
+              fullWidth
+              disabled
+            />
+          )}
+          <OnboardingPagination
+            totalSlides={slides.length}
+            currentIndex={currentIndex}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.footer, styles.footerDefault]}>
+        <OnboardingButton
+          title={isLastSlide ? "C'est parti !" : "Suivant"}
+          onPress={isLastSlide ? handleFinish : handleNext}
+          fullWidth
+        />
+        <OnboardingPagination
+          totalSlides={slides.length}
+          currentIndex={currentIndex}
+        />
+      </View>
+    );
   };
 
   return (
@@ -115,39 +198,7 @@ export default function OnboardingScreen() {
         snapToInterval={width}
         decelerationRate="fast"
       />
-      <View style={[styles.footer, isWelcomeSlide ? styles.footerWelcome : styles.footerDefault]}>
-        {isWelcomeSlide ? (
-          <>
-            <OnboardingButton
-              title="Créer un compte"
-              onPress={handleCreateAccount}
-              fullWidth
-            />
-            <OnboardingButton
-              title="Se connecter"
-              onPress={handleLogin}
-              fullWidth
-            />
-          </>
-        ) : (
-          <OnboardingButton
-            title={isLastSlide ? "C'est parti !" : "Suivant"}
-            onPress={isLastSlide ? handleFinish : handleNext}
-            fullWidth
-          />
-        )}
-        <OnboardingPagination
-          totalSlides={slides.length}
-          currentIndex={currentIndex}
-        />
-        {isWelcomeSlide && (
-          <Pressable onPress={handleGuest} style={styles.guestButton}>
-            <Text style={styles.guestText}>
-              Je continue en tant qu'invité
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      {renderFooter()}
     </View>
   );
 }
@@ -166,7 +217,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    paddingHorizontal: 15,
+    paddingHorizontal: 26,
     gap: 10,
   },
   footerWelcome: {
@@ -174,6 +225,28 @@ const styles = StyleSheet.create({
   },
   footerDefault: {
     paddingBottom: 127,
+  },
+  footerChoice: {
+    paddingBottom: 127,
+  },
+  choiceDescription: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.42,
+    lineHeight: 18,
+    width: 311,
+    marginBottom: 10,
+  },
+  loginButton: {
+    paddingVertical: 13,
+    paddingHorizontal: 79,
+  },
+  loginText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: "rgba(255, 255, 255, 0.7)",
   },
   guestButton: {
     paddingVertical: 10,

@@ -8,80 +8,78 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Play, Pause } from "lucide-react-native";
+import { Play, Pause, SkipBack, SkipForward } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
+import { StyleBadges } from "@/components/Badges/StyleBadges";
 
 interface VoteArtistCardProps {
   name: string;
-  votes: number;
-  rank: number;
+  trackTitle: string;
   imageUrl: string;
   styles: string[];
   isPlaying?: boolean;
   onPlayPress?: () => void;
+  onPrevPress?: () => void;
+  onNextPress?: () => void;
 }
 
 export const VoteArtistCard: React.FC<VoteArtistCardProps> = ({
-  votes,
-  rank,
+  name,
+  trackTitle,
   imageUrl,
   styles: musicStyles,
   isPlaying = false,
   onPlayPress,
+  onPrevPress,
+  onNextPress,
 }) => {
-  const displayStyles = musicStyles.slice(0, 1);
-  const remainingCount = musicStyles.length - 1;
-
   return (
     <View style={cardStyles.container}>
-      {/* Header: votes + position */}
-      <View style={cardStyles.header}>
-        <View style={cardStyles.votesContainer}>
-          <Text style={cardStyles.votesText}>{votes} votes</Text>
-        </View>
-        <View style={cardStyles.positionBadge}>
-          <Text style={cardStyles.positionLabel}>Position</Text>
-          <Text style={cardStyles.positionValue}>#{rank}</Text>
-        </View>
-      </View>
-
-      {/* Image Card */}
       <View style={cardStyles.imageCard}>
         <ImageBackground
           source={{ uri: imageUrl }}
           style={cardStyles.imageBackground}
           imageStyle={cardStyles.image}
         >
-          {/* Gradient overlays */}
+          {/* Gradient overlay */}
           <LinearGradient
             colors={["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.63)"]}
             locations={[0.38, 1]}
             style={cardStyles.gradient}
           />
 
-          {/* Play Button */}
-          <Pressable onPress={onPlayPress} style={cardStyles.playButton}>
-            <BlurView intensity={20} style={cardStyles.playButtonBlur}>
-              {isPlaying ? (
-                <Pause size={24} color="#FFFFFF" fill="#FFFFFF" />
-              ) : (
-                <Play size={24} color="#FFFFFF" fill="#FFFFFF" />
-              )}
-            </BlurView>
-          </Pressable>
+          {/* Play Controls - centered */}
+          <View style={cardStyles.controlsRow}>
+            <Pressable onPress={onPrevPress} style={cardStyles.smallControlButton}>
+              <SkipBack size={14} color="#FFFFFF" fill="#FFFFFF" />
+            </Pressable>
 
-          {/* Music Styles */}
-          <View style={cardStyles.stylesContainer}>
-            {displayStyles.map((style, index) => (
-              <BlurView key={index} intensity={15} style={cardStyles.styleBadge}>
-                <Text style={cardStyles.styleText}>{style}</Text>
+            <Pressable onPress={onPlayPress} style={cardStyles.playButton}>
+              <BlurView intensity={20} style={cardStyles.playButtonBlur}>
+                {isPlaying ? (
+                  <Pause size={28} color="#FFFFFF" fill="#FFFFFF" />
+                ) : (
+                  <Play size={28} color="#FFFFFF" fill="#FFFFFF" />
+                )}
               </BlurView>
-            ))}
-            {remainingCount > 0 && (
-              <BlurView intensity={15} style={cardStyles.styleBadge}>
-                <Text style={cardStyles.styleText}>+{remainingCount}</Text>
-              </BlurView>
-            )}
+            </Pressable>
+
+            <Pressable onPress={onNextPress} style={cardStyles.smallControlButton}>
+              <SkipForward size={14} color="#FFFFFF" fill="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {/* Bottom content: artist name + track + styles */}
+          <View style={cardStyles.bottomContent}>
+            <View style={cardStyles.artistInfo}>
+              <Text style={cardStyles.artistName} numberOfLines={1}>
+                {name}
+              </Text>
+              <Text style={cardStyles.trackTitle} numberOfLines={1}>
+                {trackTitle}
+              </Text>
+            </View>
+            <StyleBadges styles={musicStyles} maxVisible={1} />
           </View>
         </ImageBackground>
       </View>
@@ -92,46 +90,6 @@ export const VoteArtistCard: React.FC<VoteArtistCardProps> = ({
 const cardStyles = StyleSheet.create({
   container: {
     width: 280,
-    gap: 10,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  votesContainer: {
-    paddingHorizontal: 5,
-  },
-  votesText: {
-    fontFamily: Fonts.extraBold,
-    fontSize: 14,
-    color: "#FFFFFF",
-    letterSpacing: -0.42,
-  },
-  positionBadge: {
-    padding: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 25,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255, 140, 66, 0.1)",
- 
-    height: 28,
-  },
-  positionLabel: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: "#FF8C42",
-    letterSpacing: -0.24,
-  },
-  positionValue: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 12,
-    color: "#FF8C42",
-    letterSpacing: -0.24,
   },
   imageCard: {
     width: 280,
@@ -155,12 +113,28 @@ const cardStyles = StyleSheet.create({
     bottom: 0,
     borderRadius: 20,
   },
-  playButton: {
+
+  // Play controls
+  controlsRow: {
     position: "absolute",
     top: "50%",
-    left: "50%",
+    left: 0,
+    right: 0,
     marginTop: -35,
-    marginLeft: -35,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  smallControlButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 33,
+    backgroundColor: "rgba(26, 26, 26, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
@@ -173,27 +147,27 @@ const cardStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
-  stylesContainer: {
-    flexDirection: "row",
-    gap: 5,
+
+  // Bottom content
+  bottomContent: {
     padding: 8,
-  },
-  styleBadge: {
-    padding: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    overflow: "hidden",
-    height: 32,
-    justifyContent: "center",
+    gap: 12,
     alignItems: "center",
   },
-  styleText: {
-    fontFamily: Fonts.bold,
-    fontSize: 12,
+  artistInfo: {
+    alignItems: "center",
+  },
+  artistName: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
     color: "#FFFFFF",
-    letterSpacing: -0.24,
+    letterSpacing: -0.32,
+  },
+  trackTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.7)",
+    letterSpacing: -0.32,
   },
 });
 

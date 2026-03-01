@@ -5,6 +5,7 @@ import { Dimensions, Image, ImageBackground, StyleSheet, Text, View } from 'reac
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { OnboardingChoiceSlide } from './onboarding-choice-slide';
 import { VignetteGradient } from '../PictureGradient';
+import { Fonts } from '@/constants/theme';
 
 const welcomeVideo = require('@/assets/images/AccueilDifract.mp4');
 
@@ -13,7 +14,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface OnboardingSlideProps {
   slide: SlideData;
   index?: number;
-  selectedRole?: UserRole;
+  selectedRole?: UserRole | null;
   onSelectRole?: (role: UserRole) => void;
 }
 
@@ -59,11 +60,11 @@ export function OnboardingSlide({ slide, index = 0, selectedRole, onSelectRole }
     opacity: videoOpacity.value,
   }));
 
-  if (isChoice && slide.choices && selectedRole && onSelectRole) {
+  if (isChoice && slide.choices && onSelectRole) {
     return (
       <OnboardingChoiceSlide
         choices={slide.choices}
-        selectedRole={selectedRole}
+        selectedRole={selectedRole ?? null}
         onSelectRole={onSelectRole}
       />
     );
@@ -197,10 +198,10 @@ const styles = StyleSheet.create({
     width: 337,
   },
   fullscreenRegularText: {
-    fontFamily: 'Area-ExtraBold',
+    fontFamily: Fonts.regular,
   },
   fullscreenBoldText: {
-    fontFamily: 'Area-Bold',
+    fontFamily: Fonts.bold,
   },
   // Default
   container: {
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontFamily: 'Area-Bold',
+    fontFamily: Fonts.bold,
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 30,
@@ -232,9 +233,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   regularText: {
-    fontFamily: 'Area-Regular',
+    fontFamily: Fonts.regular,
   },
   boldText: {
-    fontFamily: 'Area-Bold',
+    fontFamily: Fonts.bold,
   },
 });

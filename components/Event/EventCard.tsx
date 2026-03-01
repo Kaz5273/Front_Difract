@@ -3,15 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ImageBackground,
   Pressable,
   Image,
+  ImageBackground,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Fonts, Typography } from "@/constants/theme";
-import { Calendar, MapPin, Ticket } from "lucide-react-native";
+import { Fonts } from "@/constants/theme";
+import { Calendar, Clock, MapPin } from "lucide-react-native";
 import { router } from "expo-router";
+import { StyleBadges } from "@/components/Badges/StyleBadges";
+import { EarlyAccessBadge } from "@/components/Badges/EarlyAccessBadge";
 
 interface EventCardProps {
   id: number;
@@ -23,6 +24,7 @@ interface EventCardProps {
   price: number;
   imageUrl: string;
   styles: string[];
+  earlyAccess?: boolean;
   friendsGoing?: number;
   friendsAvatars?: string[];
   onPress?: () => void;
@@ -38,25 +40,27 @@ export const EventCard: React.FC<EventCardProps> = ({
   price,
   imageUrl,
   styles: musicStyles,
-  friendsGoing = 0,
+  earlyAccess = true,
   friendsAvatars = [],
   onPress,
 }) => {
-  // Formatter la date (ex: "ven. 06 juin")
-  const formatDate = (dateString: string) => {
+  const formatShortDate = (dateString: string) => {
     const date = new Date(dateString);
-    const day = date.toLocaleDateString("fr-FR", { weekday: "short" });
-    const dayNum = date.getDate().toString().padStart(2, "0");
-    const month = date.toLocaleDateString("fr-FR", { month: "short" });
-    return { day, dayNum, month };
+    const dayNum = date.getDate();
+    const month = date.toLocaleDateString("fr-FR", { month: "long" });
+    const year = date.getFullYear();
+    return `${dayNum} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
   };
 
-  const { day, dayNum, month } = formatDate(eventDate);
+  const formatFullDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const weekday = date.toLocaleDateString("fr-FR", { weekday: "long" });
+    const dayNum = date.getDate();
+    const month = date.toLocaleDateString("fr-FR", { month: "long" });
+    const year = date.getFullYear();
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${dayNum} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+  };
 
-  // Afficher maximum 2 styles
-  const displayStyles = musicStyles.slice(0, 2);
-
-  // Gestion du clic - navigation par défaut si pas de onPress personnalisé
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -67,103 +71,76 @@ export const EventCard: React.FC<EventCardProps> = ({
 
   return (
     <Pressable onPress={handlePress} style={styles.container}>
-      <ImageBackground
-        source={{ uri: imageUrl }}
-        style={styles.imageBackground}
-        imageStyle={styles.image}
-      >
-        {/* Gradients overlay */}
-        <LinearGradient
-          colors={["rgba(0, 0, 0, 0.35)", "rgba(0, 0, 0, 0)"]}
-          locations={[0, 0.29]}
-          style={styles.topGradient}
-        />
-        <LinearGradient
-          colors={["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.45)"]}
-          locations={[0.38, 1]}
-          style={styles.bottomGradient}
-        />
-        <LinearGradient
-          colors={["rgba(0, 0, 0, 0.2)", "rgba(0, 0, 0, 0.2)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.overlayGradient}
-        />
+      {/* Header: Title + Early Access Badge */}
+      <View style={styles.headerRow}>
+        <Text style={styles.eventTitle} numberOfLines={1}>
+          {title}
+        </Text>
+        {earlyAccess && <EarlyAccessBadge price={price} />}
+      </View>
 
-        <View style={styles.content}>
-          {/* Top Row - Date & Styles */}
-          <View style={styles.topRow}>
-            {/* Date Badge */}
-            <BlurView intensity={40} style={styles.dateBadge}>
-              <Text style={styles.dateDay}>{day}</Text>
-              <Text style={styles.dateDayNum}>{dayNum}</Text>
-              <Text style={styles.dateMonth}>{month}</Text>
+      {/* Image Section */}
+      <View style={styles.imageContainer}>
+        <ImageBackground
+          source={{ uri: imageUrl }}
+          style={styles.imageBackground}
+          imageStyle={styles.imageStyle}
+        >
+          {/* Top overlay badges */}
+          <View style={styles.imageTopRow}>
+            {/* Date pill */}
+            <BlurView intensity={40} tint="dark" style={styles.datePill}>
+              <Calendar size={12} color="#FFFFFF" />
+              <Text style={styles.datePillText}>{formatShortDate(eventDate)}</Text>
             </BlurView>
 
-            {/* Music Styles */}
-            <View style={styles.stylesContainer}>
-              {displayStyles.map((style, index) => (
-                <BlurView key={index} intensity={15} style={styles.styleBadge}>
-                  <Text style={styles.styleText}>{style}</Text>
-                </BlurView>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Bottom Info Section */}
-        <BlurView intensity={20} style={styles.bottomSection}>
-          <View style={styles.infoLeft}>
-            <Text style={styles.eventTitle} numberOfLines={1}>
-              {title}
-            </Text>
-            <View style={styles.eventDetails}>
-              <View style={styles.detailRow}>
-                <Calendar size={12} color="#D7D7D7" />
-                <Text style={styles.detailText}>{timeRange}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <MapPin size={12} color="#D7D7D7" />
-                <Text style={styles.detailText}>
-                  {location}
-                  {distance && ` - ${distance}`}
-                </Text>
-              </View>
-            </View>
+            {/* Style pills */}
+            <StyleBadges styles={musicStyles} maxVisible={2} />
           </View>
 
-          <View style={styles.infoRight}>
-            {/* Price */}
-            <View style={styles.priceRow}>
-              <Ticket size={12} color="#FC5F67" />
-              <Text style={styles.priceText}>
-                {price.toFixed(2).replace(".", ",")}€
-              </Text>
-            </View>
-
-            {/* Friends Going */}
-            {friendsGoing > 0 && (
-              <View style={styles.friendsRow}>
-                <View style={styles.avatarsContainer}>
-                  {friendsAvatars.slice(0, 3).map((avatar, index) => (
-                    <Image
-                      key={index}
-                      source={{ uri: avatar }}
-                      style={[
-                        styles.avatar,
-                        { marginLeft: index > 0 ? -13 : 0 },
-                      ]}
-                    />
-                  ))}
+          {/* Bottom info section */}
+          <BlurView intensity={25} tint="dark" style={styles.bottomSection}>
+            <View style={styles.bottomContent}>
+              {/* Left: date, time, location */}
+              <View style={styles.infoLeft}>
+                <View style={styles.infoRow}>
+                  <Calendar size={12} color="#FFFFFF" />
+                  <Text style={styles.infoText}>{formatFullDate(eventDate)}</Text>
                 </View>
-                <Text style={styles.friendsText}>
-                  {friendsGoing} ami.e.s y vont
-                </Text>
+                <View style={styles.infoRow}>
+                  <Clock size={12} color="#FFFFFF" />
+                  <Text style={styles.infoText}>{timeRange}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <MapPin size={12} color="#FFFFFF" />
+                  <Text style={styles.infoText}>
+                    {location}
+                    {distance ? ` - ${distance}` : ""}
+                  </Text>
+                </View>
               </View>
-            )}
-          </View>
-        </BlurView>
-      </ImageBackground>
+
+              {/* Right: artist avatars */}
+              {friendsAvatars.length > 0 && (
+                <View style={styles.avatarsWrapper}>
+                  <View style={styles.avatarsContainer}>
+                    {friendsAvatars.slice(0, 3).map((avatar, index) => (
+                      <Image
+                        key={index}
+                        source={{ uri: avatar }}
+                        style={[
+                          styles.avatar,
+                          { marginLeft: index > 0 ? -13 : 0, zIndex: 3 - index },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          </BlurView>
+        </ImageBackground>
+      </View>
     </Pressable>
   );
 };
@@ -171,177 +148,100 @@ export const EventCard: React.FC<EventCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    height: 180,
+    borderRadius: 22,
+    overflow: "hidden",
+    gap: 12,
+  },
+  // Header row
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+  },
+  eventTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
+    color: "#FFFFFF",
+    letterSpacing: -0.32,
+    flex: 1,
+  },
+  // Image section
+  imageContainer: {
+    width: "100%",
     borderRadius: 20,
     overflow: "hidden",
   },
   imageBackground: {
     width: "100%",
-    height: "100%",
   },
-  image: {
+  imageStyle: {
     borderRadius: 20,
   },
-  topGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "29%",
-    borderRadius: 20,
-  },
-  bottomGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "62%",
-    borderRadius: 20,
-  },
-  overlayGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 20,
-  },
-  content: {
-    flex: 1,
-    padding: 10,
-    justifyContent: "flex-start",
-  },
-  topRow: {
+  // Top overlay
+  imageTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    padding: 8,
+    height: 94,
   },
-  dateBadge: {
-    width: 54,
-    height: 54,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  dateDay: {
-    fontFamily: Fonts.bold,
-    fontSize: 10,
-    color: "#FFFFFF",
-    letterSpacing: -0.4,
-    textAlign: "center",
-  },
-  dateMonth: {
-    fontFamily: Fonts.bold,
-    fontSize: 10,
-    color: "#FFFFFF",
-    letterSpacing: -0.4,
-    textAlign: "center",
-  },
-  dateDayNum: {
-    ...Typography.body,
-    fontSize: 20,
-    color: "#FFFFFF",
-    letterSpacing: -0.8,
-    textAlign: "center",
-    marginTop: -4,
-    marginBottom: -6,
-  },
-  stylesContainer: {
+  datePill: {
     flexDirection: "row",
-    gap: 5,
-    flexWrap: "wrap",
-  },
-  styleBadge: {
-    padding: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    alignItems: "center",
+    gap: 4,
+    height: 30,
+    paddingHorizontal: 8,
     borderRadius: 25,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
-    justifyContent: "center",
+    backgroundColor: "rgba(26, 26, 26, 0.8)",
   },
-  styleText: {
-    fontFamily: Fonts.bold,
-    fontSize: 10,
+  datePillText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
     color: "#FFFFFF",
-    letterSpacing: -0.4,
+    letterSpacing: -0.24,
   },
+  // Bottom info section
   bottomSection: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 74,
-    backgroundColor: "rgba(0, 0, 0, 0.20)",
+    width: "100%",
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "rgba(26, 26, 26, 0.8)",
+  },
+  bottomContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 10,
-    overflow: "hidden",
+    alignItems: "flex-start",
+    padding: 16,
   },
   infoLeft: {
     flex: 1,
-    gap: 2,
+    gap: 6,
   },
-  eventTitle: {
-    fontFamily: Fonts.extraBold,
-    fontSize: 14,
-    color: "#FFFFFF",
-    letterSpacing: -0.56,
-  },
-  eventDetails: {
-    gap: 3,
-  },
-  detailRow: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 4,
   },
-  detailText: {
+  infoText: {
     fontFamily: Fonts.bold,
-    fontSize: 10,
-    color: "rgba(255, 255, 255, 0.7)",
-    letterSpacing: -0.4,
-  },
-  infoRight: {
-    width: 139,
-    height: 46,
-    gap: 5,
-    alignItems: "flex-end",
-    justifyContent: "flex-end",
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  priceText: {
-    fontFamily: Fonts.extraBold,
     fontSize: 12,
-    color: "#FC5F67",
-    letterSpacing: -0.48,
+    color: "#FFFFFF",
+    letterSpacing: -0.24,
   },
-  friendsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
+  // Avatars
+  avatarsWrapper: {
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+    alignSelf: "flex-end",
   },
   avatarsContainer: {
     flexDirection: "row",
-    paddingRight: 13,
   },
   avatar: {
     width: 25,
     height: 25,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-  },
-  friendsText: {
-    fontFamily: Fonts.regular,
-    fontSize: 10,
-    color: "#FFFFFF",
-    letterSpacing: -0.4,
+    borderRadius: 51,
   },
 });

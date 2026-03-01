@@ -1,75 +1,84 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Header } from "@/components/Header/header";
-import { ArtistVoteCard } from "@/components/Artist/ArtistVoteCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
-import { VoteCountdown } from "@/components/Vote/VoteCountdown";
-import { VoteEventCard } from "@/components/Vote/VoteEventCard";
 import { TabSelector } from "@/components/Button/TabSelector";
 import { CalendarBadge } from "@/components/Badges/CalendarBadge";
 import { CalendarModal } from "@/components/Calendar/CalendarModal";
-import { Filter } from "lucide-react-native";
 import FilterBadge from "@/components/Badges/FilterBadge";
+import { VoteSection } from "@/components/Vote/VoteSection";
+import { ArrowDownUp } from "lucide-react-native";
+import { Fonts } from "@/constants/theme";
 
 export default function VoteScreen() {
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Date de fin des votes (exemple: dans 1 jour, 3 heures, 39 minutes)
   const voteEndDate = new Date();
   voteEndDate.setDate(voteEndDate.getDate() + 1);
   voteEndDate.setHours(voteEndDate.getHours() + 3);
   voteEndDate.setMinutes(voteEndDate.getMinutes() + 39);
 
-  // Données d'exemple pour les artistes en vote
   const votingArtists = [
     {
       id: "1",
-      name: "Choi",
+      name: "Milly Bobby Bro...",
       rank: 1,
-      votes: 132,
+      votes: 124,
       imageUrl:
         "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
-      styles: ["Folk", "Indie", "Rock", "Pop"],
+      styles: ["Techno", "House", "Minimal", "Ambient"],
     },
     {
       id: "2",
-      name: "Luna",
+      name: "Billy Joe",
       rank: 2,
-      votes: 98,
+      votes: 120,
       imageUrl:
         "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop",
-      styles: ["Jazz", "Soul", "R&B"],
+      styles: ["Rock", "Indie", "Pop", "Alternative"],
     },
     {
       id: "3",
-      name: "Nova",
+      name: "Why so serious",
       rank: 3,
-      votes: 76,
+      votes: 95,
       imageUrl:
         "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop",
-      styles: ["Electronic", "House"],
+      styles: ["Reggae", "Dub"],
+    },
+  ];
+
+  const voteEvents = [
+    {
+      id: "1",
+      eventName: "Espace rencontre - Soirée électro",
+      eventDate: "Samedi 17 Juin 2026",
+      location: "Annecy-le-vieux",
+      distance: "150km",
+      endDate: voteEndDate,
+      artists: votingArtists,
     },
     {
-      id: "4",
-      name: "Echo",
-      rank: 4,
-      votes: 54,
-      imageUrl:
-        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=400&fit=crop",
-      styles: ["Rock", "Alternative"],
+      id: "2",
+      eventName: "Espace rencontre ",
+      eventDate: "Samedi 17 Juin 2026",
+      location: "Annecy-le-vieux",
+      distance: "150km",
+      endDate: voteEndDate,
+      artists: votingArtists,
     },
     {
-      id: "5",
-      name: "Pulse",
-      rank: 5,
-      votes: 32,
-      imageUrl:
-        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop",
-      styles: ["Hip-Hop", "Rap", "Trap"],
+      id: "3",
+      eventName: "Espace rencontre - Soiré...",
+      eventDate: "Samedi 17 Juin 2026",
+      location: "Annecy-le-vieux",
+      distance: "150km",
+      endDate: voteEndDate,
+      artists: votingArtists,
     },
   ];
 
@@ -81,6 +90,7 @@ export default function VoteScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Filter badges row */}
         <View style={styles.badgesContainer}>
           <LocationBadge
             location="Annecy"
@@ -88,9 +98,15 @@ export default function VoteScreen() {
           />
           <CalendarBadge onPress={() => setCalendarVisible(true)} />
           <FilterBadge onPress={() => console.log("Open filters")} />
+          <Pressable
+            style={styles.sortButton}
+            onPress={() => console.log("Sort")}
+          >
+            <ArrowDownUp size={14} color="#FFFFFF" />
+            <Text style={styles.sortText}>Trier</Text>
+          </Pressable>
         </View>
 
-        {/* Calendar Modal */}
         <CalendarModal
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
@@ -111,42 +127,27 @@ export default function VoteScreen() {
           />
         </View>
 
-        {/* Section Vote Info */}
-        <View style={styles.voteInfoSection}>
-          {/* Countdown Timer */}
-          <VoteCountdown endDate={voteEndDate} />
-
-          {/* Event Card */}
-          <VoteEventCard
-            eventName="Espace rencontre"
-            location="Annecy-le-vieux"
-            distance="150km"
-            dayOfWeek="ven."
-            dayNumber="06"
-            month="juin"
-            onPress={() => router.push("/vote/1")}
+        {/* Vote Sections */}
+        {voteEvents.map((event) => (
+          <VoteSection
+            key={event.id}
+            eventName={event.eventName}
+            eventDate={event.eventDate}
+            location={event.location}
+            distance={event.distance}
+            endDate={event.endDate}
+            artists={event.artists}
+            onArtistPress={() => router.push(`/vote/${event.id}`)}
           />
-        </View>
+        ))}
 
-        {/* Section Artistes en vote */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.artistsSection}
-        >
-          {votingArtists.map((artist) => (
-            <ArtistVoteCard
-              key={artist.id}
-              id={artist.id}
-              name={artist.name}
-              rank={artist.rank}
-              votes={artist.votes}
-              imageUrl={artist.imageUrl}
-              styles={artist.styles}
-              onPress={() => console.log("Vote pour:", artist.name)}
-            />
-          ))}
-        </ScrollView>
+        {/* FAQ Section */}
+        <View style={styles.faqSection}>
+          <Text style={styles.faqText}>
+            Vous ne trouvez pas votre bonheur ? Des questions ?
+          </Text>
+          <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -163,6 +164,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingVertical: 10,
     gap: 16,
+    paddingBottom: 130,
   },
   badgesContainer: {
     paddingHorizontal: 20,
@@ -172,17 +174,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  titleContainer: {
-    paddingHorizontal: 20,
-  },
-  voteInfoSection: {
-    paddingHorizontal: 20,
-    gap: 5,
-  },
-  artistsSection: {
+  sortButton: {
     flexDirection: "row",
-    gap: 5,
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#343434",
+    borderRadius: 25,
+    paddingHorizontal: 10,
+    height: 30,
+  },
+  sortText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 12,
+    color: "#FFFFFF",
+    letterSpacing: -0.24,
+  },
+  faqSection: {
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingVertical: 15,
+    gap: 8,
+    alignItems: "center",
+  },
+  faqText: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#7B7B7B",
+    textAlign: "center",
+    letterSpacing: -0.24,
+  },
+  faqLink: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.24,
+    textDecorationLine: "underline",
   },
 });
