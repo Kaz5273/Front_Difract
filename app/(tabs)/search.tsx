@@ -11,6 +11,8 @@ import { EventCard } from "@/components/Event/EventCard";
 import { useStyles } from "@/hooks/useStyle";
 import { router } from "expo-router";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +20,7 @@ export default function SearchScreen() {
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
   const { styles: musicStyles, isLoading } = useStyles();
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
+  const { showModal, setShowModal, guard } = useGuestGuard();
 
   // Données d'exemple pour les artistes
   const exampleArtists = [
@@ -176,8 +179,8 @@ export default function SearchScreen() {
               trackId={artist.mainTrack?.id}
               isFavorite={favorites[artist.id]}
               onPress={() => router.push(`/artist/${artist.id}`)}
-              onFavoritePress={() => toggleFavorite(artist.id)}
-              onPlayPress={() => handlePlayArtist(artist)}
+              onFavoritePress={() => guard(() => toggleFavorite(artist.id))}
+              onPlayPress={() => guard(() => handlePlayArtist(artist))}
             />
           ))}
         </ScrollView>
@@ -208,12 +211,14 @@ export default function SearchScreen() {
                 styles={event.styles}
                 friendsGoing={event.friendsGoing}
                 friendsAvatars={event.friendsAvatars}
-                onPress={() => console.log("Événement cliqué:", event.title)}
+                onPress={() => router.push(`/event/${event.id}`)}
               />
             </View>
           ))}
         </ScrollView>
       </ScrollView>
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
 }

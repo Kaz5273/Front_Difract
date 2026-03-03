@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Header } from "@/components/Header/header";
@@ -11,80 +11,43 @@ import FilterBadge from "@/components/Badges/FilterBadge";
 import { VoteSection } from "@/components/Vote/VoteSection";
 import { ArrowDownUp } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
+import { useVotes } from "@/hooks/use-votes";
+import { useAuthStore } from "@/store/auth-store";
+
+function formatEventDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
 
 export default function VoteScreen() {
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const { showModal, setShowModal, guard } = useGuestGuard();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { groupedByEvent, isLoading, error, fetchMyVotes } = useVotes();
 
-  const voteEndDate = new Date();
-  voteEndDate.setDate(voteEndDate.getDate() + 1);
-  voteEndDate.setHours(voteEndDate.getHours() + 3);
-  voteEndDate.setMinutes(voteEndDate.getMinutes() + 39);
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyVotes();
+    }
+  }, [isAuthenticated]);
 
-  const votingArtists = [
-    {
-      id: "1",
-      name: "Milly Bobby Bro...",
-      rank: 1,
-      votes: 124,
-      imageUrl:
-        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
-      styles: ["Techno", "House", "Minimal", "Ambient"],
-    },
-    {
-      id: "2",
-      name: "Billy Joe",
-      rank: 2,
-      votes: 120,
-      imageUrl:
-        "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop",
-      styles: ["Rock", "Indie", "Pop", "Alternative"],
-    },
-    {
-      id: "3",
-      name: "Why so serious",
-      rank: 3,
-      votes: 95,
-      imageUrl:
-        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop",
-      styles: ["Reggae", "Dub"],
-    },
-  ];
-
-  const voteEvents = [
-    {
-      id: "1",
-      eventName: "Espace rencontre - Soirée électro",
-      eventDate: "Samedi 17 Juin 2026",
-      location: "Annecy-le-vieux",
-      distance: "150km",
-      endDate: voteEndDate,
-      artists: votingArtists,
-    },
-    {
-      id: "2",
-      eventName: "Espace rencontre ",
-      eventDate: "Samedi 17 Juin 2026",
-      location: "Annecy-le-vieux",
-      distance: "150km",
-      endDate: voteEndDate,
-      artists: votingArtists,
-    },
-    {
-      id: "3",
-      eventName: "Espace rencontre - Soiré...",
-      eventDate: "Samedi 17 Juin 2026",
-      location: "Annecy-le-vieux",
-      distance: "150km",
-      endDate: voteEndDate,
-      artists: votingArtists,
-    },
-  ];
+  // Filtrer par onglet : "en cours" = événements PUBLISHED, "terminé" = DONE
+  const filteredEvents = groupedByEvent.filter((group) => {
+    if (activeTab === "first") {
+      return group.event.status !== "DONE";
+    }
+    return group.event.status === "DONE";
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Header title="Les votes" showBackButton showMenuButton />
+      <Header title="Vos votes" showBackButton showMenuButton />
 
       <ScrollView
         style={styles.scrollView}
@@ -94,15 +57,15 @@ export default function VoteScreen() {
         <View style={styles.badgesContainer}>
           <LocationBadge
             location="Annecy"
-            onPress={() => console.log("Change location")}
+            onPress={() => guard(() => console.log("Change location"))}
           />
-          <CalendarBadge onPress={() => setCalendarVisible(true)} />
-          <FilterBadge onPress={() => console.log("Open filters")} />
+          <CalendarBadge onPress={() => guard(() => setCalendarVisible(true))} />
+          <FilterBadge onPress={() => guard(() => console.log("Open filters"))} />
           <Pressable
             style={styles.sortButton}
-            onPress={() => console.log("Sort")}
+            onPress={() => guard(() => console.log("Sort"))}
           >
-            <ArrowDownUp size={14} color="#FFFFFF" />
+            <ArrowDownUp size={20} color="#FFFFFF" />
             <Text style={styles.sortText}>Trier</Text>
           </Pressable>
         </View>
@@ -127,19 +90,73 @@ export default function VoteScreen() {
           />
         </View>
 
+        {/* Guest state */}
+        {!isAuthenticated && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.guestTitle}>Suivez vos votes</Text>
+            <Text style={styles.emptyText}>
+              Créez un compte pour voter pour vos artistes préférés et retrouver tous vos votes ici.
+            </Text>
+            <Pressable
+              style={styles.ctaButton}
+              onPress={() => router.push("/OnBoarding/onboarding")}
+            >
+              <Text style={styles.ctaText}>Créer un compte</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Loading */}
+        {isAuthenticated && isLoading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#FC5F67" />
+          </View>
+        )}
+
+        {/* Error */}
+        {isAuthenticated && error && !isLoading && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>{error}</Text>
+            <Pressable onPress={fetchMyVotes} style={styles.retryButton}>
+              <Text style={styles.retryText}>Réessayer</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Empty state */}
+        {isAuthenticated && !isLoading && !error && filteredEvents.length === 0 && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>
+              {activeTab === "first"
+                ? "Vous n'avez pas encore voté pour un événement en cours."
+                : "Aucun vote terminé."}
+            </Text>
+          </View>
+        )}
+
         {/* Vote Sections */}
-        {voteEvents.map((event) => (
-          <VoteSection
-            key={event.id}
-            eventName={event.eventName}
-            eventDate={event.eventDate}
-            location={event.location}
-            distance={event.distance}
-            endDate={event.endDate}
-            artists={event.artists}
-            onArtistPress={() => router.push(`/vote/${event.id}`)}
-          />
-        ))}
+        {isAuthenticated &&
+          !isLoading &&
+          !error &&
+          filteredEvents.map((group) => (
+            <VoteSection
+              key={group.event.id}
+              eventName={group.event.title}
+              eventDate={formatEventDate(group.event.event_date)}
+              location={group.event.location}
+              endDate={new Date(group.event.event_date)}
+              artists={group.artists.map((artist, index) => ({
+                id: String(artist.id),
+                name: artist.name,
+                rank: index + 1,
+                votes: 0,
+                imageUrl: artist.media_url || "",
+                styles: [],
+                isVoted: true,
+              }))}
+              onArtistPress={() => router.push(`/vote/${group.event.id}`)}
+            />
+          ))}
 
         {/* FAQ Section */}
         <View style={styles.faqSection}>
@@ -149,6 +166,8 @@ export default function VoteScreen() {
           <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
         </View>
       </ScrollView>
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
 }
@@ -175,19 +194,64 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sortButton: {
-    flexDirection: "row",
+   flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#343434",
+    justifyContent: "center",
+    gap: 8,
+    padding: 8,
+    backgroundColor: "#212121",
     borderRadius: 25,
-    paddingHorizontal: 10,
-    height: 30,
   },
   sortText: {
     fontFamily: Fonts.semiBold,
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: -0.24,
+  },
+  centerContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+    gap: 16,
+  },
+  emptyText: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#7B7B7B",
+    textAlign: "center",
+    letterSpacing: -0.28,
+  },
+  retryButton: {
+    backgroundColor: "#FC5F67",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: "#000000",
+    letterSpacing: -0.28,
+  },
+  guestTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 18,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.36,
+  },
+  ctaButton: {
+    backgroundColor: "#FC5F67",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  ctaText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: "#000000",
+    letterSpacing: -0.28,
   },
   faqSection: {
     paddingHorizontal: 20,

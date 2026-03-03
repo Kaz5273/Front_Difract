@@ -9,11 +9,14 @@ import { CalendarModal } from "@/components/Calendar/CalendarModal";
 import { TabSelector } from "@/components/Button/TabSelector";
 import FilterBadge from "@/components/Badges/FilterBadge";
 import { router } from "expo-router";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 
 export default function EvenementsScreen() {
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
+  const { showModal, setShowModal, guard } = useGuestGuard();
 
   // Données d'exemple pour les événements
   const events = [
@@ -103,10 +106,10 @@ export default function EvenementsScreen() {
         <View style={styles.badgesContainer}>
           <LocationBadge
             location="Annecy"
-            onPress={() => console.log("Change location")}
+            onPress={() => guard(() => console.log("Change location"))}
           />
-          <CalendarBadge onPress={() => setCalendarVisible(true)} />
-          <FilterBadge onPress={() => console.log("Open filters")} />
+          <CalendarBadge onPress={() => guard(() => setCalendarVisible(true))} />
+          <FilterBadge onPress={() => guard(() => console.log("Open filters"))} />
         </View>
         <View>
           <TabSelector
@@ -149,6 +152,7 @@ export default function EvenementsScreen() {
           ))}
         </View>
       </ScrollView>
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
 }

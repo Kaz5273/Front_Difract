@@ -1,47 +1,118 @@
-import React, { useState } from "react";
-import { StyleSheet, Pressable, View, Text } from "react-native";
+import React from "react";
+import {
+  StyleSheet,
+  Pressable,
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  Image,
+} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { BlurView } from "expo-blur";
-import { ChevronLeft, MapPin, Users, Home } from "lucide-react-native";
+import {
+  ChevronLeft,
+  MapPin,
+  Calendar,
+  Clock,
+  MoreHorizontal,
+} from "lucide-react-native";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { EventHeaderImage } from "@/components/Event/EventHeaderImage";
 import { EventAbout } from "@/components/Event/EventAbout";
+import { ArtistVoteCard } from "@/components/Artist/ArtistVoteCard";
+import { VoteCountdown } from "@/components/Vote/VoteCountdown";
 import { Fonts } from "@/constants/theme";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 
 // Données d'exemple - à remplacer par les vraies données
 const exampleEvents = [
   {
     id: 1,
     title: "Espace rencontre",
-    location: "Annecy-le-vieux 74000",
+    location: "Annecy-le-vieux - 150km",
     address: "33 Rue des Alpes - Annecy-le-Vieux",
     distance: "150km",
-    eventDate: "2025-06-06T18:00:00.000Z",
-    timeRange: "18h00 à 00h00",
+    eventDate: "2026-06-17T18:00:00.000Z",
+    timeRange: "19h à 00h",
     duration: "6h00",
     capacity: "400 places",
     price: 22.5,
     imageUrl:
       "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop",
-    styles: ["Jazz", "Expérimentale"],
-    friendsGoing: 3,
-    friendsAvatars: [
-      "https://i.pravatar.cc/150?img=1",
-      "https://i.pravatar.cc/150?img=2",
-      "https://i.pravatar.cc/150?img=3",
-    ],
+    styles: ["Techno", "Rock", "Expérimentale", "Rap"],
     description:
       "Joe Biden, 46 ans, est un véritable alchimiste du son. Entre ses doigts, un saxophone ténor prend vie ; ses improvisations, nourries de deux décennies d'amour inconditionnel pour le jazz, convoquent aussi bien les bruissements feutrés des clubs new-yorkais que l'énergie éclatante de la scène parisienne.",
   },
 ];
 
+const exampleParticipants = [
+  {
+    id: "1",
+    name: "Milly Bobby Brown",
+    rank: 1,
+    votes: 124,
+    imageUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop",
+    styles: ["Techno"],
+    isVoted: true,
+  },
+  {
+    id: "2",
+    name: "Billy Joe",
+    rank: 2,
+    votes: 120,
+    imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop",
+    styles: ["Rock"],
+    isVoted: false,
+  },
+  {
+    id: "3",
+    name: "Why so serious ?",
+    rank: 3,
+    votes: 95,
+    imageUrl: "https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=300&h=300&fit=crop",
+    styles: ["Reggae"],
+    isVoted: false,
+  },
+  {
+    id: "4",
+    name: "No way bobby no way",
+    rank: 4,
+    votes: 34,
+    imageUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop",
+    styles: ["Psychédélique"],
+    isVoted: false,
+  },
+];
+
+const exampleComments = [
+  {
+    id: "1",
+    username: "@Kazeeee",
+    avatar: "https://i.pravatar.cc/150?img=1",
+    text: "Artiste incroyable ! C'était le feu sur scène, qualité scénique irréprochable, vous avez tout mon soutien !",
+  },
+  {
+    id: "2",
+    username: "@Kazeeee",
+    avatar: "https://i.pravatar.cc/150?img=1",
+    text: "Artiste incroyable ! C'était le feu sur scène, qualité scénique irréprochable, vous avez tout mon soutien !",
+  },
+];
+
+function formatEventDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
-  const [isFavorite, setIsFavorite] = useState(false);
-
-  // Récupérer l'événement (utiliser l'id pour filtrer dans une vraie app)
+  const { showModal, setShowModal, guard } = useGuestGuard();
   const event = exampleEvents[0];
 
   return (
@@ -61,57 +132,127 @@ export default function EventDetailScreen() {
             imageUrl={event.imageUrl}
             eventDate={event.eventDate}
             styles={event.styles}
-            isFavorite={isFavorite}
-            onFavoritePress={() => setIsFavorite(!isFavorite)}
-            onSharePress={() => console.log("Partager l'événement")}
+            onSharePress={() => guard(() => console.log("Partager l'événement"))}
           />
         }
       >
         <ThemedView style={styles.contentContainer}>
-          <ThemedView style={styles.titleContainer}>
-            <ThemedText style={styles.eventTitle}>{event.title}</ThemedText>
-          </ThemedView>
+          {/* Title + Countdown */}
+          <View style={styles.titleRow}>
+            <ThemedText style={styles.eventTitle} numberOfLines={1}>
+              {event.title}
+            </ThemedText>
+            <VoteCountdown endDate={new Date(event.eventDate)} />
+          </View>
 
-          {/* Bouton Vote */}
-          <Pressable
-            onPress={() => console.log("Redirection vers Vote")}
-            style={styles.voteButton}
-          >
-            <Text style={styles.voteButtonText}>Voter pour cet événement</Text>
-          </Pressable>
-          {/* Informations de l'événement */}
+          {/* Event Info */}
           <View style={styles.eventInfoContainer}>
-            {/* Adresse */}
             <View style={styles.infoRow}>
-              <Home size={18} color="#D7D7D7" strokeWidth={2} />
+              <Calendar size={16} color="#FFFFFF" />
+              <Text style={styles.infoText}>
+                {formatEventDate(event.eventDate)}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Clock size={16} color="#FFFFFF" />
+              <Text style={styles.infoText}>{event.timeRange}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <MapPin size={16} color="#FFFFFF" />
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
+          </View>
+          <Pressable
+              onPress={() => guard(() => console.log("Participer"))}
+              style={styles.participateButton}
+            >
+              <Text style={styles.participateButtonText}>
+                Participer à l'événement
+              </Text>
+            </Pressable>
+          {/* Les participants */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Les participants</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.participantsScroll}
+            >
+              {exampleParticipants.map((artist) => (
+                <ArtistVoteCard
+                  key={artist.id}
+                  id={artist.id}
+                  name={artist.name}
+                  rank={artist.rank}
+                  votes={artist.votes}
+                  imageUrl={artist.imageUrl}
+                  styles={artist.styles}
+                  isVoted={artist.isVoted}
+                  onPress={() => guard(() => router.push(`/artist/${artist.id}`))}
+                />
+              ))}
+            </ScrollView>
+          </View>
 
-            {/* Localisation avec distance */}
-            <View style={styles.infoRow}>
-              <MapPin size={18} color="#D7D7D7" strokeWidth={2} />
-              <Text style={styles.infoText}>{event.address}</Text>
-            </View>
+          {/* Action Buttons */}
+          <View style={styles.buttonsContainer}>
+            <Pressable
+              onPress={() => guard(() => router.push(`/vote/${event.id}`))}
+              style={styles.voteButton}
+            >
+              <Text style={styles.voteButtonText}>
+                Votez pour votre artiste préféré
+              </Text>
+            </Pressable>
 
-            {/* Capacité */}
-            <View style={styles.infoRow}>
-              <Users size={18} color="#D7D7D7" strokeWidth={2} />
-              <Text style={styles.infoText}>{event.capacity}</Text>
-            </View>
+            <Pressable
+              onPress={() => guard(() => console.log("Billeterie"))}
+              style={styles.ticketButton}
+            >
+              <Text style={styles.ticketButtonText}>
+                Accéder à la billeterie
+              </Text>
+            </Pressable>
           </View>
 
           {/* À propos de l'événement */}
           <EventAbout description={event.description} />
 
-          {/* Bouton Billeterie */}
-          <Pressable
-            onPress={() => console.log("Accéder à la billeterie")}
-            style={styles.ticketButton}
-          >
-            <Text style={styles.ticketButtonText}>Accéder à la billeterie</Text>
-          </Pressable>
+          {/* Commentaires */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Commentaires</Text>
+            <View style={styles.commentsContainer}>
+              {exampleComments.map((comment) => (
+                <View key={comment.id} style={styles.commentCard}>
+                  <View style={styles.commentHeader}>
+                    <Image
+                      source={{ uri: comment.avatar }}
+                      style={styles.commentAvatar}
+                    />
+                    <Text style={styles.commentUsername}>{comment.username}</Text>
+                    <Pressable style={styles.commentMore}>
+                      <MoreHorizontal size={16} color="#7B7B7B" />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.commentText}>{comment.text}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Comment Input */}
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Ajoutez un commentaire"
+                placeholderTextColor="#7B7B7B"
+                onFocus={() => guard(() => {})}
+              />
+            </View>
+          </View>
         </ThemedView>
       </ParallaxScrollView>
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </View>
   );
 }
@@ -136,52 +277,78 @@ const styles = StyleSheet.create({
     paddingRight: 2,
   },
   contentContainer: {
-    gap: 16,
+    gap: 24,
   },
-  titleContainer: {
+  // Title + Countdown
+  titleRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   eventTitle: {
     fontFamily: Fonts.extraBold,
-    fontSize: 25,
+    fontSize: 24,
     lineHeight: 32,
+    flex: 1,
+    letterSpacing: -0.72,
   },
-  ticketButton: {
-    backgroundColor: "#FC5F67",
-    paddingHorizontal: 15,
-    paddingVertical: 11,
-    borderRadius: 100,
-    alignSelf: "center",
-  },
-  ticketButtonText: {
-    fontFamily: Fonts.extraBold,
-    fontSize: 14,
-    color: "#000000",
-    textAlign: "center",
-    letterSpacing: -0.56,
-  },
+  // Event Info
   eventInfoContainer: {
-    gap: 8,
+    gap: 6,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   infoText: {
     fontFamily: Fonts.bold,
     fontSize: 12,
-    color: "#D7D7D7",
-    letterSpacing: -0.48,
+    color: "#FFFFFF",
+    letterSpacing: -0.24,
+  },
+  // Sections
+  sectionContainer: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 20,
+    letterSpacing: -0.68,
+    color: "#FFFFFF",
+  },
+  // Participants
+  participantsScroll: {
+    flexDirection: "row",
+    gap: 16,
+    paddingTop: 4,
+  },
+  // Buttons
+  buttonsContainer: {
+    gap: 12,
+    alignItems: "center",
+  },
+  participateButton: {
+    backgroundColor: "#6F00FF",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderRadius: 100,
+    width: "100%",
+  },
+  participateButtonText: {
+    fontFamily: Fonts.extraBold,
+    fontSize: 14,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.56,
   },
   voteButton: {
-    backgroundColor: "#FC5F67",
+    borderWidth: 1,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 15,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: 100,
-    alignSelf: "center",
     width: "100%",
   },
   voteButtonText: {
@@ -190,5 +357,71 @@ const styles = StyleSheet.create({
     color: "#000000",
     textAlign: "center",
     letterSpacing: -0.56,
+  },
+  ticketButton: {
+    backgroundColor: "#FC5F67",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 100,
+    alignSelf: "center",
+      width: "100%",
+  },
+  ticketButtonText: {
+    fontFamily: Fonts.extraBold,
+    fontSize: 14,
+    color: "#000000",
+    textAlign: "center",
+
+    letterSpacing: -0.56,
+  },
+  // Comments
+  commentsContainer: {
+    gap: 12,
+  },
+  commentCard: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+  },
+  commentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  commentAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  commentUsername: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#FFFFFF",
+    letterSpacing: -0.24,
+    flex: 1,
+  },
+  commentMore: {
+    padding: 4,
+  },
+  commentText: {
+    fontFamily: Fonts.bold,
+    fontSize: 13,
+    color: "#B8B8B8",
+    letterSpacing: -0.26,
+    lineHeight: 18,
+  },
+  commentInputContainer: {
+    marginTop: 4,
+  },
+  commentInput: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: "#FFFFFF",
+    letterSpacing: -0.26,
   },
 });

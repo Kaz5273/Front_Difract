@@ -15,7 +15,7 @@ export function useOnboarding() {
   const checkOnboarding = async () => {
     try {
       const value = await AsyncStorage.getItem(ONBOARDING_KEY);
-      setIsOnboardingComplete(value === 'null');
+      setIsOnboardingComplete(value === 'true');
     } catch (error) {
       console.error('Error checking onboarding:', error);
       setIsOnboardingComplete(false);

@@ -6,7 +6,7 @@ import {
   ImageBackground,
   Text,
 } from "react-native";
-import { Heart, Share } from "lucide-react-native";
+import { Share } from "lucide-react-native";
 import { BlurView } from "expo-blur";
 import { Fonts, Typography } from "@/constants/theme";
 
@@ -14,8 +14,6 @@ interface EventHeaderImageProps {
   imageUrl: string;
   eventDate: string;
   styles?: string[];
-  isFavorite?: boolean;
-  onFavoritePress?: () => void;
   onSharePress?: () => void;
 }
 
@@ -23,8 +21,6 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
   imageUrl,
   eventDate,
   styles: musicStyles = [],
-  isFavorite = false,
-  onFavoritePress,
   onSharePress,
 }) => {
   // Format date (ex: "ven.", "06", "juin")
@@ -56,18 +52,6 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
             </BlurView>
           </Pressable>
         )}
-        {onFavoritePress && (
-          <Pressable onPress={onFavoritePress} style={styles.iconButtonWrapper}>
-            <BlurView intensity={15} style={styles.iconButton}>
-              <Heart
-                size={20}
-                color="#FFFFFF"
-                fill={isFavorite ? "#FC5F67" : "transparent"}
-                strokeWidth={2.5}
-              />
-            </BlurView>
-          </Pressable>
-        )}
       </View>
 
       {/* Styles musicaux et Date en bas */}
@@ -79,15 +63,6 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
               <Text style={styles.styleText}>{style}</Text>
             </BlurView>
           ))}
-        </View>
-
-        {/* Date Badge en bas à droite */}
-        <View style={styles.dateBadgeContainer}>
-          <BlurView intensity={15} style={styles.dateBadge}>
-            <Text style={styles.dateDay}>{day}</Text>
-            <Text style={styles.dateDayNum}>{dayNum}</Text>
-            <Text style={styles.dateMonth}>{month}</Text>
-          </BlurView>
         </View>
       </View>
     </ImageBackground>

@@ -1,8 +1,11 @@
 import { CompletionScreen } from "@/components/CompletionScreen";
 import IconGoogle from "@/components/icons/iconGoogle";
+import { StepProfilePhoto } from "@/components/register-artist/StepProfilePhoto";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { userService } from "@/services/user/user.service";
 import { Ionicons } from "@expo/vector-icons";
+import type { ImagePickerAsset } from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -19,22 +22,37 @@ import {
 import type { TextInput as TextInputType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 export default function RegisterPublicScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [pseudo, setPseudo] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState<ImagePickerAsset | null>(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", ""]);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCompletion, setShowCompletion] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const { register, verifyEmail, resendCode, isLoading, error, clearError } =
+  const { register, verifyEmail, resendCode, updateUser, user, isLoading, error, clearError } =
     useAuth();
   const codeInputRefs = useRef<(TextInputType | null)[]>([]);
 
   const handleCodeChange = (text: string, index: number) => {
+    // Gestion auto-fill / collage : le texte contient plusieurs chiffres
+    if (text.length > 1) {
+      const digits = text.replace(/[^0-9]/g, "").slice(0, 5).split("");
+      const newCode = ["", "", "", "", ""];
+      digits.forEach((d, i) => {
+        newCode[i] = d;
+      });
+      setCode(newCode);
+      // Focus le dernier champ rempli ou le suivant
+      const focusIndex = Math.min(digits.length, 4);
+      codeInputRefs.current[focusIndex]?.focus();
+      return;
+    }
+
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
@@ -49,28 +67,6 @@ export default function RegisterPublicScreen() {
     // Retour au champ précédent sur Backspace si vide
     if (key === "Backspace" && !code[index] && index > 0) {
       codeInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleSendCode = async () => {
-    clearError();
-    if (isRegistered) {
-      // Le compte existe déjà, renvoyer le code
-      try {
-        await resendCode(email.trim());
-        Alert.alert("Succès", "Un nouveau code a été envoyé à votre adresse email.");
-      } catch {
-        // Erreur gérée par le store
-      }
-    } else {
-      // Première fois : créer le compte + envoyer le code
-      try {
-        await register(pseudo.trim(), email.trim(), password, "PUBLIC");
-        setIsRegistered(true);
-        Alert.alert("Succès", "Un code de vérification a été envoyé à votre adresse email.");
-      } catch {
-        // Erreur gérée par le store
-      }
     }
   };
 
@@ -97,7 +93,10 @@ export default function RegisterPublicScreen() {
       }
       setCurrentStep(1);
     } else if (currentStep === 1) {
-      // Étape 1 : Email + Mot de passe
+      // Étape 1 : Photo de profil (optionnel)
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      // Étape 2 : Email + Mot de passe
       if (!email.trim()) {
         Alert.alert("Erreur", "Veuillez saisir votre adresse email");
         return;
@@ -122,13 +121,17 @@ export default function RegisterPublicScreen() {
         Alert.alert("Erreur", "Les mots de passe ne correspondent pas");
         return;
       }
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      // Étape 2 : Vérification du code email
-      if (!isRegistered) {
-        Alert.alert("Erreur", "Veuillez d'abord envoyer le code de confirmation");
-        return;
+      // Créer le compte + envoyer le code automatiquement
+      try {
+        await register(pseudo.trim(), email.trim(), password, "PUBLIC");
+        setIsRegistered(true);
+        setCurrentStep(3);
+      } catch {
+        // Erreur gérée par le store
       }
+      return;
+    } else if (currentStep === 3) {
+      // Étape 3 : Vérification du code email
       if (!isCodeComplete) {
         Alert.alert("Erreur", "Veuillez saisir le code complet");
         return;
@@ -137,6 +140,29 @@ export default function RegisterPublicScreen() {
       try {
         const fullCode = code.join("");
         await verifyEmail(email.trim(), fullCode);
+
+        // Upload photo de profil après vérification (token disponible)
+        if (profilePhoto) {
+          try {
+            const formData = new FormData();
+            formData.append("image", {
+              uri: profilePhoto.uri,
+              type: profilePhoto.mimeType || "image/jpeg",
+              name: profilePhoto.fileName || "profile.jpg",
+            } as any);
+            const uploadResponse = await userService.uploadProfilePicture(formData);
+            // Mettre à jour le user dans le store avec le media uploadé
+            const uploadedMedia = Array.isArray(uploadResponse.media)
+              ? uploadResponse.media[0]
+              : uploadResponse.media;
+            if (user && uploadedMedia) {
+              updateUser({ ...user, media: [...(user.media || []), uploadedMedia] });
+            }
+          } catch {
+            // Upload échoue silencieusement, l'utilisateur pourra le refaire depuis son profil
+          }
+        }
+
         setShowCompletion(true);
       } catch {
         // Erreur gérée par le store
@@ -216,8 +242,16 @@ export default function RegisterPublicScreen() {
             </View>
           )}
 
-          {/* Étape 1 : Email + Mot de passe */}
+          {/* Étape 1 : Photo de profil */}
           {currentStep === 1 && (
+            <StepProfilePhoto
+              profilePhoto={profilePhoto}
+              onUpdate={setProfilePhoto}
+            />
+          )}
+
+          {/* Étape 2 : Email + Mot de passe */}
+          {currentStep === 2 && (
             <View style={styles.formSection}>
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldTitle}>Votre adresse email</Text>
@@ -233,6 +267,7 @@ export default function RegisterPublicScreen() {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
+                  textContentType="emailAddress"
                   editable={!isLoading}
                 />
                 {email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
@@ -255,6 +290,7 @@ export default function RegisterPublicScreen() {
                   }}
                   secureTextEntry
                   autoComplete="password-new"
+                  textContentType="newPassword"
                   editable={!isLoading}
                 />
               </View>
@@ -271,17 +307,22 @@ export default function RegisterPublicScreen() {
                     clearError();
                   }}
                   secureTextEntry
+                  autoComplete="password-new"
+                  textContentType="newPassword"
                   editable={!isLoading}
                 />
               </View>
             </View>
           )}
 
-          {/* Étape 2 : Code de confirmation */}
-          {currentStep === 2 && (
+          {/* Étape 3 : Code de confirmation */}
+          {currentStep === 3 && (
             <View style={styles.formSection}>
               <View style={styles.fieldGroup}>
                 <Text style={styles.codeLabel}>Code de confirmation</Text>
+                <Text style={styles.codeHelper}>
+                  Un code a été envoyé à {email}
+                </Text>
                 <View style={styles.codeContainer}>
                   {code.map((digit, index) => (
                     <TextInput
@@ -296,39 +337,22 @@ export default function RegisterPublicScreen() {
                         handleCodeKeyPress(nativeEvent.key, index)
                       }
                       keyboardType="number-pad"
-                      maxLength={1}
+                      maxLength={index === 0 ? 5 : 1}
                       textAlign="center"
+                      textContentType={index === 0 ? "oneTimeCode" : "none"}
+                      autoComplete={index === 0 ? "sms-otp" : "off"}
                     />
                   ))}
                 </View>
               </View>
-
-              <View style={styles.codeActionsGroup}>
-                {!isRegistered ? (
-                  <Pressable
-                    style={[styles.sendCodeButton, isLoading && styles.buttonDisabled]}
-                    onPress={handleSendCode}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.sendCodeButtonText}>
-                        Envoyer un code de confirmation
-                      </Text>
-                    )}
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={handleResendCode}
-                    disabled={isLoading}
-                  >
-                    <Text style={styles.resendCodeText}>
-                      Renvoyer le code
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
+              <Pressable
+                onPress={handleResendCode}
+                disabled={isLoading}
+              >
+                <Text style={styles.resendCodeText}>
+                  Renvoyer le code
+                </Text>
+              </Pressable>
             </View>
           )}
 
@@ -346,21 +370,25 @@ export default function RegisterPublicScreen() {
             style={[
               styles.continueButton,
               isLoading && styles.buttonDisabled,
-              currentStep === 2 && (!isCodeComplete || !isRegistered) && styles.buttonDisabled,
+              currentStep === 3 && (!isCodeComplete || !isRegistered) && styles.buttonDisabled,
             ]}
             onPress={handleContinue}
-            disabled={isLoading || (currentStep === 2 && (!isCodeComplete || !isRegistered))}
+            disabled={isLoading || (currentStep === 3 && (!isCodeComplete || !isRegistered))}
           >
-            {isLoading && currentStep !== 2 ? (
+            {isLoading && currentStep !== 3 ? (
               <ActivityIndicator color="#000000" />
             ) : (
               <Text style={styles.continueButtonText}>
-                {currentStep === 2 ? "Valider" : "Continuer"}
+                {currentStep === 1 && !profilePhoto
+                  ? "Passer"
+                  : currentStep === 3
+                    ? "Valider"
+                    : "Continuer"}
               </Text>
             )}
           </Pressable>
 
-          {currentStep !== 2 && (
+          {currentStep !== 3 && (
             <Pressable style={styles.googleButton} onPress={() => {}}>
               <View style={styles.googleButtonContent}>
                 <IconGoogle width={20} height={20} />
@@ -474,11 +502,17 @@ const styles = StyleSheet.create({
 
   // Code verification
   codeLabel: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
+    fontSize: 17,
+    fontFamily: Fonts.extraBold,
     color: "#FFFFFF",
     textAlign: "center",
-    letterSpacing: -0.26,
+    letterSpacing: -0.34,
+  },
+  codeHelper: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: "rgba(255, 255, 255, 0.6)",
+    textAlign: "center",
   },
   codeContainer: {
     flexDirection: "row",
@@ -496,26 +530,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Fonts.bold,
     color: "#FFFFFF",
-  },
-  codeActionsGroup: {
-    width: 334,
-    alignItems: "center",
-    gap: 0,
-  },
-  sendCodeButton: {
-    width: 334,
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-    borderRadius: 49,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sendCodeButtonText: {
-    fontSize: 13,
-    fontFamily: Fonts.bold,
-    color: "#FFFFFF",
-    textAlign: "center",
   },
   resendCodeText: {
     fontSize: 13,

@@ -18,11 +18,14 @@ import { useState } from "react";
 import { EventCard } from "@/components/Event/EventCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 
 export default function HomeScreen() {
   // 🪝 Récupération de la fonction logout et de l'état
   const { logout, isLoading, user } = useAuth();
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
+  const { showModal, setShowModal, guard } = useGuestGuard();
 
   // État pour gérer les favoris
   const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
@@ -242,8 +245,8 @@ export default function HomeScreen() {
               trackId={artist.mainTrack?.id}
               isFavorite={favorites[artist.id]}
               onPress={() => router.push(`/artist/${artist.id}`)}
-              onFavoritePress={() => toggleFavorite(artist.id)}
-              onPlayPress={() => handlePlayArtist(artist)}
+              onFavoritePress={() => guard(() => toggleFavorite(artist.id))}
+              onPlayPress={() => guard(() => handlePlayArtist(artist))}
             />
           ))}
         </ScrollView>
@@ -280,6 +283,8 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       </ScrollView>
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
 }

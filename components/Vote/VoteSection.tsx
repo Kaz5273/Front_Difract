@@ -13,6 +13,7 @@ interface VotingArtist {
   votes: number;
   imageUrl: string;
   styles: string[];
+  isVoted?: boolean;
 }
 
 interface VoteSectionProps {
@@ -78,6 +79,7 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
             votes={artist.votes}
             imageUrl={artist.imageUrl}
             styles={artist.styles}
+            isVoted={artist.isVoted}
             onPress={() => onArtistPress?.(artist)}
           />
         ))}

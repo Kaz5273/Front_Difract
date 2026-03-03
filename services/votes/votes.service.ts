@@ -37,6 +37,14 @@ export const votesService = {
   },
 
   /**
+   * Liste des votes de l'utilisateur connecté (avec relations event/artist)
+   */
+  getMyVotes: async (): Promise<Vote[]> => {
+    const response = await apiClient.get<Vote[]>(ENDPOINTS.MY_VOTES);
+    return response.data;
+  },
+
+  /**
    * Supprimer un vote
    */
   delete: async (id: number | string): Promise<void> => {

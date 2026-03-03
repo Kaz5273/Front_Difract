@@ -1,15 +1,18 @@
+import { getMediaUrl } from "@/services/api/client";
+import { useAuthStore } from "@/store/auth-store";
 import { useRouter } from "expo-router";
 import {
   Bell,
   ChevronLeft,
   CircleUserRound,
-  Heart,
   Search,
   Star,
 } from "lucide-react-native";
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "../themed-text";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "../GuestActionModal";
 
 type HeaderVariant = "default" | "detail";
 
@@ -37,6 +40,14 @@ export function Header({
   rightComponent,
 }: HeaderProps) {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const { showModal, setShowModal, guard } = useGuestGuard();
+
+  // Photo de profil : chercher dans user.media (table media) puis fallback sur media_url
+  const profileMedia = user?.media?.find((m) => m.role === "PROFILE" && m.is_primary);
+  const profilePictureUrl = profileMedia
+    ? getMediaUrl(profileMedia)
+    : user?.media_url ?? null;
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -76,10 +87,17 @@ export function Header({
       <View style={styles.leftSection}>
         {showBackButton && (
           <Pressable
-            onPress={() => router.push("/profile")}
+            onPress={() => guard(() => router.push("/profile"))}
             style={styles.iconButton}
           >
-            <CircleUserRound size={30} color="#FFFFFF" />
+            {profilePictureUrl ? (
+              <Image
+                source={{ uri: profilePictureUrl }}
+                style={styles.profileAvatar}
+              />
+            ) : (
+              <CircleUserRound size={30} color="#FFFFFF" />
+            )}
           </Pressable>
         )}
       </View>
@@ -91,15 +109,9 @@ export function Header({
 
       {/* Section droite */}
       <View style={styles.rightSection}>
-        <Pressable
-          onPress={() => router.push("/favorite-events")}
-          style={styles.iconButton}
-        >
-          <Heart size={24} color="#FFFFFF" />
-        </Pressable>
         {showMenuButton && (
           <Pressable
-            onPress={() => router.push("/favorites")}
+            onPress={() => guard(() => router.push("/favorites"))}
             style={styles.iconButton}
           >
             <Star size={24} color="#FFFFFF" />
@@ -110,7 +122,9 @@ export function Header({
         </Pressable>
         {rightComponent}
       </View>
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </View>
+    
   );
 }
 
@@ -143,5 +157,10 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 8,
+  },
+  profileAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
 });

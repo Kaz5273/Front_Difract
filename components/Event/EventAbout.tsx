@@ -28,8 +28,6 @@ export function EventAbout({ description }: EventAboutProps) {
         end={{ x: 0.84, y: 1 }}
         style={styles.descriptionCard}
       >
-        <ThemedText style={styles.descriptionTitle}>Description</ThemedText>
-
         <View style={styles.descriptionContainer}>
           <ThemedText
             style={styles.descriptionText}
@@ -60,7 +58,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   sectionTitle: {
-    fontFamily: Fonts.normalBlack,
+    fontFamily: Fonts.regular,
     fontSize: 17,
     lineHeight: 17,
     letterSpacing: -0.68,
@@ -72,13 +70,7 @@ const styles = StyleSheet.create({
     gap: 10,
     overflow: "hidden",
   },
-  descriptionTitle: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    lineHeight: 15,
-    letterSpacing: -0.6,
-    color: "#FFFFFF",
-  },
+
   descriptionContainer: {
     position: "relative",
   },

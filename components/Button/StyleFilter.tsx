@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { Fonts } from "@/constants/theme";
 import type { MusicStyle } from "@/services/api/types";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
 
 interface StyleFilterProps {
   styles: MusicStyle[];
@@ -17,6 +18,7 @@ export const StyleFilter: React.FC<StyleFilterProps> = ({
   showAllOption = true,
 }) => {
   const isAllSelected = selectedStyleId === null;
+   
 
   return (
     <ScrollView

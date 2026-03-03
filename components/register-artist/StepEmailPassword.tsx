@@ -32,6 +32,7 @@ export function StepEmailPassword({
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+          textContentType="emailAddress"
         />
         {email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
           <Text style={styles.helperText}>
@@ -50,6 +51,7 @@ export function StepEmailPassword({
           onChangeText={onUpdatePassword}
           secureTextEntry
           autoComplete="password-new"
+          textContentType="newPassword"
         />
       </View>
 
@@ -62,6 +64,8 @@ export function StepEmailPassword({
           value={confirmPassword}
           onChangeText={onUpdateConfirmPassword}
           secureTextEntry
+          autoComplete="password-new"
+          textContentType="newPassword"
         />
       </View>
     </View>

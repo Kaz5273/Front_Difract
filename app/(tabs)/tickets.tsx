@@ -63,6 +63,17 @@ export default function TicketsScreen() {
         </ThemedView>
 
         <ThemedView style={styles.stepContainer}>
+          <ThemedText type="subtitle">Test Compléter profil</ThemedText>
+          <Pressable
+            onPress={() => {
+              router.push("/profile-completion");
+            }}
+          >
+            <ThemedText type="link">Go to Profile Completion</ThemedText>
+          </Pressable>
+        </ThemedView>
+
+        <ThemedView style={styles.stepContainer}>
           <ThemedText type="subtitle">Test déco</ThemedText>
           <Pressable
             onPress={handleLogout}

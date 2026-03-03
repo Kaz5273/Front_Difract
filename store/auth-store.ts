@@ -1,7 +1,28 @@
 import { create } from 'zustand';
-import { User } from '@/services/api/types';
+import { User, Media } from '@/services/api/types';
 import { storage } from '@/utils/storage';
 import { authService, AuthResponse } from '@/services/auth/auth.service';
+import { userService } from '@/services/user/user.service';
+
+/**
+ * Récupère les médias via GET /media et les fusionne dans le user
+ * Utilisé comme fallback quand GET /me ne retourne pas media[]
+ */
+async function fetchAndMergeMedia(user: User): Promise<User> {
+  try {
+    const grouped = await userService.getMedia();
+    const mediaList: Media[] = [];
+    if (grouped.profile_picture) mediaList.push(grouped.profile_picture);
+    if (grouped.gallery?.length) mediaList.push(...grouped.gallery);
+    if (grouped.tracks?.length) mediaList.push(...grouped.tracks);
+    if (grouped.intro_video) mediaList.push(grouped.intro_video);
+    console.log('📷 Fetched media separately:', mediaList.length, 'items');
+    return { ...user, media: mediaList };
+  } catch (err) {
+    console.warn('⚠️ Failed to fetch media separately:', err);
+    return user;
+  }
+}
 
 interface AuthState {
   // État
@@ -48,19 +69,34 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const response: AuthResponse = await authService.login({ email, password });
 
-      // Sauvegarder dans AsyncStorage
+      // Sauvegarder le token dans AsyncStorage
       await storage.saveToken(response.token);
-      await storage.saveUser(response.user);
+
+      // Re-fetch le profil complet (avec media[]) depuis GET /me
+      let fullUser = response.user;
+      try {
+        fullUser = await authService.me();
+        console.log('📷 /me media count:', fullUser.media?.length ?? 'undefined');
+      } catch (meError) {
+        console.warn('⚠️ GET /me failed after login:', meError);
+      }
+
+      // Fallback : si pas de media, les récupérer via GET /media
+      if (!fullUser.media || fullUser.media.length === 0) {
+        fullUser = await fetchAndMergeMedia(fullUser);
+      }
+
+      await storage.saveUser(fullUser);
 
       set({
-        user: response.user,
+        user: fullUser,
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       });
 
-      console.log('✅ Login successful:', response.user.email);
+      console.log('✅ Login successful:', fullUser.email, '| media:', fullUser.media?.length ?? 0);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erreur de connexion';
 
@@ -133,18 +169,34 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const response: AuthResponse = await authService.verifyEmail(email, code);
 
+      // Sauvegarder le token dans AsyncStorage
       await storage.saveToken(response.token);
-      await storage.saveUser(response.user);
+
+      // Re-fetch le profil complet (avec media[]) depuis GET /me
+      let fullUser = response.user;
+      try {
+        fullUser = await authService.me();
+        console.log('📷 /me media count:', fullUser.media?.length ?? 'undefined');
+      } catch (meError) {
+        console.warn('⚠️ GET /me failed after verifyEmail:', meError);
+      }
+
+      // Fallback : si pas de media, les récupérer via GET /media
+      if (!fullUser.media || fullUser.media.length === 0) {
+        fullUser = await fetchAndMergeMedia(fullUser);
+      }
+
+      await storage.saveUser(fullUser);
 
       set({
-        user: response.user,
+        user: fullUser,
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       });
 
-      console.log('✅ Email verified:', response.user.email);
+      console.log('✅ Email verified:', fullUser.email, '| media:', fullUser.media?.length ?? 0);
     } catch (error: any) {
       const errorMessage = error.response?.data?.errors?.code?.[0]
         || error.response?.data?.message
@@ -237,7 +289,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       try {
-        const user: User = await authService.me();
+        let user: User = await authService.me();
+        console.log('📷 /me media count:', user.media?.length ?? 'undefined');
+
+        // Fallback : si pas de media, les récupérer via GET /media
+        if (!user.media || user.media.length === 0) {
+          user = await fetchAndMergeMedia(user);
+        }
 
         await storage.saveUser(user);
 
@@ -248,7 +306,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
         });
 
-        console.log('✅ User loaded successfully:', user.email);
+        console.log('✅ User loaded successfully:', user.email, '| media:', user.media?.length ?? 0);
       } catch (error) {
         const savedUser = await storage.getUser();
 

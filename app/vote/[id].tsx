@@ -16,6 +16,8 @@ import {
 } from "lucide-react-native";
 import { BlurView } from "expo-blur";
 import { Fonts } from "@/constants/theme";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 import { VoteCountdown } from "@/components/Vote/VoteCountdown";
 import {
   VoteArtistCarousel,
@@ -75,6 +77,7 @@ const mockArtists: CarouselArtist[] = [
 export default function VoteDetailScreen() {
   const { id } = useLocalSearchParams();
 
+  const { showModal, setShowModal, guard } = useGuestGuard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [playingArtistId, setPlayingArtistId] = useState<string | null>(null);
@@ -214,14 +217,14 @@ export default function VoteDetailScreen() {
     [getPlayer, transitionTo, startProgressTracking, stopProgressTracking]
   );
 
-  // When scroll settles: play the landed-on artist
+  // When scroll settles: play the landed-on artist (only if authenticated)
   const handleScrollEnd = useCallback(
     (index: number) => {
       const artist = mockArtists[index];
       if (!artist) return;
-      transitionTo(artist.id);
+      guard(() => transitionTo(artist.id));
     },
-    [transitionTo]
+    [transitionTo, guard]
   );
 
   const handleSeek = useCallback(
@@ -315,7 +318,7 @@ export default function VoteDetailScreen() {
             onIndexChange={setCurrentIndex}
             onScrollEnd={handleScrollEnd}
             playingArtistId={playingArtistId}
-            onPlayPress={handlePlayPress}
+            onPlayPress={(artistId: string) => guard(() => handlePlayPress(artistId))}
           />
 
           {/* Track Player */}
@@ -331,7 +334,7 @@ export default function VoteDetailScreen() {
 
         {/* Action Buttons */}
         <View style={styles.buttonsContainer}>
-          <Pressable onPress={handleVote} style={styles.voteButton}>
+          <Pressable onPress={() => guard(handleVote)} style={styles.voteButton}>
             <Text style={styles.voteButtonText}>Votez</Text>
           </Pressable>
           <Pressable onPress={handleViewProfile} style={styles.profileButton}>
@@ -339,6 +342,8 @@ export default function VoteDetailScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
 }

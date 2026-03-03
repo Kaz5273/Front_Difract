@@ -17,12 +17,14 @@ interface VideoClipProps {
   videoUrl?: string | number; // string pour URL, number pour require()
   thumbnailUrl: string;
   videoType?: "youtube" | "local"; // Type de vidéo
+  onBeforePlay?: (action: () => void) => void;
 }
 
 export function VideoClip({
   videoUrl,
   thumbnailUrl,
   videoType = "youtube",
+  onBeforePlay,
 }: VideoClipProps) {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
@@ -66,7 +68,7 @@ export function VideoClip({
         <ThemedText style={styles.sectionTitle}>Extrait</ThemedText>
 
         {/* Vidéo avec thumbnail */}
-        <Pressable onPress={handleOpenVideo} style={styles.videoContainer}>
+        <Pressable onPress={() => onBeforePlay ? onBeforePlay(handleOpenVideo) : handleOpenVideo()} style={styles.videoContainer}>
           <ImageBackground
             source={{ uri: thumbnailUrl }}
             style={styles.thumbnail}

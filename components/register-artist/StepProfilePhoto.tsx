@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 13,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     color: "#b6b6b6",
     textAlign: "center",
   },

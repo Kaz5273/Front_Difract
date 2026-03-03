@@ -94,9 +94,11 @@ export default function RootLayout() {
               name="OnBoarding/onboarding"
               options={{ gestureEnabled: false }}
             />
-            <Stack.Screen name="Auth/Index" />
-            <Stack.Screen name="Auth/register-public" />
-            <Stack.Screen name="Auth/register-artist" />
+            <Stack.Screen name="Auth/Index" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="Auth/Login" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="Auth/register" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="Auth/register-public" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="Auth/register-artist" options={{ gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           </Stack>
           <GlobalAudioPlayer />

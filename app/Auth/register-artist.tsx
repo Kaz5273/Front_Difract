@@ -8,6 +8,7 @@ import { StepProfilePhoto } from "@/components/register-artist/StepProfilePhoto"
 import { StepStyleSelection } from "@/components/register-artist/StepStyleSelection";
 import { StepSubscription } from "@/components/register-artist/StepSubscription";
 import { StepSummary } from "@/components/register-artist/StepSummary";
+import { ProfileCompletionModal } from "@/components/register-artist/ProfileCompletionModal";
 import { useAuth } from "@/hooks/use-auth";
 import { MusicStyle } from "@/services/api/types";
 import { stylesService } from "@/services/styles/styles.service";
@@ -70,9 +71,10 @@ export default function RegisterArtistScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingFromSummary, setEditingFromSummary] = useState(false);
   const [code, setCode] = useState(["", "", "", "", ""]);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const codeInputRefs = useRef<(TextInputType | null)[]>([]);
 
-  const { register, verifyEmail, resendCode, isLoading, error, clearError } = useAuth();
+  const { register, verifyEmail, resendCode, updateUser, user, isLoading, error, clearError } = useAuth();
 
   // Charger les styles musicaux au montage
   useEffect(() => {
@@ -84,6 +86,19 @@ export default function RegisterArtistScreen() {
   }, []);
 
   const handleCodeChange = (text: string, index: number) => {
+    // Gestion auto-fill / collage : le texte contient plusieurs chiffres
+    if (text.length > 1) {
+      const digits = text.replace(/[^0-9]/g, "").slice(0, 5).split("");
+      const newCode = ["", "", "", "", ""];
+      digits.forEach((d, i) => {
+        newCode[i] = d;
+      });
+      setCode(newCode);
+      const focusIndex = Math.min(digits.length, 4);
+      codeInputRefs.current[focusIndex]?.focus();
+      return;
+    }
+
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
@@ -124,6 +139,8 @@ export default function RegisterArtistScreen() {
     setIsSubmitting(true);
     try {
       // 1. Créer le compte artiste (bio inclus dans le payload register)
+      // Note: le register ne retourne PAS de token,
+      // les uploads se feront après la vérification email
       await register(
         data.artistName.trim(),
         data.email.trim(),
@@ -134,7 +151,22 @@ export default function RegisterArtistScreen() {
         data.bio.trim() || undefined
       );
 
-      // 2. Upload photo de profil
+      setCurrentStep(7); // Aller à la vérification du code email
+    } catch (err) {
+      // L'erreur est gérée par le store
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Upload les médias après vérification email (token disponible)
+   */
+  const handleMediaUploads = async () => {
+    try {
+      const newMedia = [...(user?.media || [])];
+
+      // Upload photo de profil
       if (data.profilePhoto) {
         const formData = new FormData();
         formData.append("image", {
@@ -142,10 +174,12 @@ export default function RegisterArtistScreen() {
           type: data.profilePhoto.mimeType || "image/jpeg",
           name: data.profilePhoto.fileName || "profile.jpg",
         } as any);
-        await userService.uploadProfilePicture(formData);
+        const res = await userService.uploadProfilePicture(formData);
+        const media = Array.isArray(res.media) ? res.media[0] : res.media;
+        if (media) newMedia.push(media);
       }
 
-      // 3. Upload musique
+      // Upload musique
       if (data.musicFile) {
         const formData = new FormData();
         formData.append("tracks[]", {
@@ -153,14 +187,19 @@ export default function RegisterArtistScreen() {
           type: data.musicFile.mimeType || "audio/mpeg",
           name: data.musicFile.name || "track.mp3",
         } as any);
-        await userService.uploadTracks(formData);
+        const res = await userService.uploadTracks(formData);
+        const tracks = Array.isArray(res.media) ? res.media : [res.media];
+        newMedia.push(...tracks);
       }
 
-      setCurrentStep(7); // Aller à la vérification du code email
+      // Mettre à jour le user dans le store avec les médias uploadés
+      if (user) {
+        updateUser({ ...user, media: newMedia });
+      }
     } catch (err) {
-      // L'erreur est gérée par le store
-    } finally {
-      setIsSubmitting(false);
+      console.warn("⚠️ Media upload failed (non-blocking):", err);
+      // Les uploads échouent silencieusement pour ne pas bloquer l'inscription
+      // L'artiste pourra les refaire depuis la complétion de profil
     }
   };
 
@@ -282,6 +321,10 @@ export default function RegisterArtistScreen() {
         try {
           const fullCode = code.join("");
           await verifyEmail(data.email.trim(), fullCode);
+
+          // Token disponible → upload des médias (photo de profil + track)
+          await handleMediaUploads();
+
           setCurrentStep(8); // Aller à l'abonnement
         } catch {
           // Erreur gérée par le store
@@ -341,10 +384,35 @@ export default function RegisterArtistScreen() {
     return "Continuer";
   };
 
+  const handleFinishCompletion = () => {
+    if (data.subscriptionPlan === "pro") {
+      setShowProfileModal(true);
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
+  const handleProfileComplete = () => {
+    setShowProfileModal(false);
+    router.replace("/profile-completion");
+  };
+
+  const handleProfileSkip = () => {
+    setShowProfileModal(false);
+    router.replace("/(tabs)");
+  };
+
   // Écran de complétion plein écran
   if (currentStep === 9) {
     return (
-      <CompletionScreen onFinish={() => router.replace("/(tabs)")} />
+      <>
+        <CompletionScreen onFinish={handleFinishCompletion} />
+        <ProfileCompletionModal
+          visible={showProfileModal}
+          onComplete={handleProfileComplete}
+          onSkip={handleProfileSkip}
+        />
+      </>
     );
   }
 
@@ -487,8 +555,10 @@ export default function RegisterArtistScreen() {
                           handleCodeKeyPress(nativeEvent.key, index)
                         }
                         keyboardType="number-pad"
-                        maxLength={1}
+                        maxLength={index === 0 ? 5 : 1}
                         textAlign="center"
+                        textContentType={index === 0 ? "oneTimeCode" : "none"}
+                        autoComplete={index === 0 ? "sms-otp" : "off"}
                       />
                     ))}
                   </View>

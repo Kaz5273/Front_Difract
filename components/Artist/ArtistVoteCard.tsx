@@ -17,6 +17,7 @@ interface ArtistVoteCardProps {
   votes: number;
   imageUrl: string;
   styles: string[];
+  isVoted?: boolean;
   onPress?: () => void;
 }
 
@@ -26,6 +27,7 @@ export const ArtistVoteCard: React.FC<ArtistVoteCardProps> = ({
   votes,
   imageUrl,
   styles: musicStyles,
+  isVoted = false,
   onPress,
 }) => {
   return (
@@ -38,7 +40,7 @@ export const ArtistVoteCard: React.FC<ArtistVoteCardProps> = ({
       </View>
 
       {/* Image Card */}
-      <View style={cardStyles.imageCard}>
+      <View style={[cardStyles.imageCard, isVoted && cardStyles.imageCardVoted]}>
         <ImageBackground
           source={{ uri: imageUrl }}
           style={cardStyles.imageBackground}
@@ -46,6 +48,13 @@ export const ArtistVoteCard: React.FC<ArtistVoteCardProps> = ({
         >
           <View style={cardStyles.content}>
             <StyleBadges styles={musicStyles} maxVisible={1} />
+            {isVoted && (
+              <View style={cardStyles.votedBadgeContainer}>
+                <View style={cardStyles.votedBadge}>
+                  <Text style={cardStyles.votedBadgeText}>Vous avez voté !</Text>
+                </View>
+              </View>
+            )}
           </View>
         </ImageBackground>
       </View>
@@ -70,9 +79,9 @@ const cardStyles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   artistName: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.regular,
     fontSize: 12,
-    color: "#FFFFFF",
+    color: "#8C8C8C",
     letterSpacing: -0.24,
   },
   imageCard: {
@@ -80,6 +89,10 @@ const cardStyles = StyleSheet.create({
     height: 132,
     borderRadius: 18,
     overflow: "hidden",
+  },
+  imageCardVoted: {
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   imageBackground: {
     width: "100%",
@@ -125,6 +138,23 @@ const cardStyles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: -0.24,
+  },
+  votedBadgeContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  votedBadge: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 25,
+  },
+  votedBadgeText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 10,
+    color: "#000000",
+    letterSpacing: -0.2,
   },
 });
 

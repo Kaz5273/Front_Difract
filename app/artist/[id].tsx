@@ -12,6 +12,8 @@ import { MusicPlayer } from "@/components/Artist/MusicPlayer";
 import { VideoClip } from "@/components/Artist/VideoClip";
 import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 import { Fonts, Typography } from "@/constants/theme";
+import { useGuestGuard } from "@/hooks/use-guest-guard";
+import { GuestActionModal } from "@/components/GuestActionModal";
 
 // Données d'exemple - à remplacer par les vraies données
 
@@ -67,6 +69,7 @@ const exampleArtists = [
 
 export default function ArtistDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
+  const { showModal, setShowModal, guard } = useGuestGuard();
 
   // Récupérer le premier artiste du tableau (ou utiliser l'id de la route pour filtrer)
   const artist = exampleArtists[0];
@@ -87,7 +90,7 @@ export default function ArtistDetailScreen() {
           <ImageCarousel
             images={artist.imageUrl}
             isFavorite={isFavorite}
-            onFavoritePress={() => setIsFavorite(!isFavorite)}
+            onFavoritePress={() => guard(() => setIsFavorite(!isFavorite))}
           />
         }
       >
@@ -95,7 +98,7 @@ export default function ArtistDetailScreen() {
           <ThemedView style={styles.titleContainer}>
             <ThemedText style={styles.styleTitle}>{artist.name}</ThemedText>
             <Pressable
-              onPress={() => console.log("Lien commentaires cliqué")}
+              onPress={() => guard(() => console.log("Lien commentaires cliqué"))}
               style={styles.linkButton}
             >
               <ThemedText style={[Typography.link, { fontSize: 12 }]}>
@@ -109,6 +112,7 @@ export default function ArtistDetailScreen() {
               tracks={artist.tracks}
               artistName={artist.name}
               artistImage={artist.imageUrl[0]}
+              onBeforePlay={guard}
             />
           )}
 
@@ -125,12 +129,15 @@ export default function ArtistDetailScreen() {
             videoUrl={artist.videoClip?.url}
             thumbnailUrl={artist.videoClip?.thumbnail || ""}
             videoType={artist.videoClip?.type}
+            onBeforePlay={guard}
           />
         </ThemedView>
       </ParallaxScrollView>
 
       {/* Lecteur audio global en bas de page */}
       <GlobalAudioPlayer forceShow={true} bottomPosition={25} />
+
+      <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </View>
   );
 }

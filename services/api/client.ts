@@ -2,7 +2,16 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { storage } from '@/utils/storage';
 
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apidifract.kazllrd.fr';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://apidifract.kazllrd.fr';
+
+/**
+ * Construit l'URL complète d'un média à partir de son path relatif
+ */
+export function getMediaUrl(media: { url?: string; path?: string }): string | null {
+  if (media.url) return media.url;
+  if (media.path) return `${API_BASE_URL}/storage/${media.path}`;
+  return null;
+}
 const API_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT) || 10000;
 
 console.log('🌐 API Base URL:', API_BASE_URL);

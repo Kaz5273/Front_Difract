@@ -17,27 +17,36 @@ interface MusicPlayerProps {
   tracks: Track[];
   artistName: string;
   artistImage: string;
+  onBeforePlay?: (action: () => void) => void;
 }
 
 export function MusicPlayer({
   tracks,
   artistName,
   artistImage,
+  onBeforePlay,
 }: MusicPlayerProps) {
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
 
   const togglePlay = (track: Track) => {
-    if (currentTrack?.id === track.id && isPlaying) {
-      pause();
+    const action = () => {
+      if (currentTrack?.id === track.id && isPlaying) {
+        pause();
+      } else {
+        play({
+          id: track.id,
+          title: track.title,
+          artistName,
+          artistImage,
+          duration: track.duration,
+          url: track.url,
+        });
+      }
+    };
+    if (onBeforePlay) {
+      onBeforePlay(action);
     } else {
-      play({
-        id: track.id,
-        title: track.title,
-        artistName,
-        artistImage,
-        duration: track.duration,
-        url: track.url,
-      });
+      action();
     }
   };
 
