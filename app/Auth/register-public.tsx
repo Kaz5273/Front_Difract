@@ -412,7 +412,7 @@ export default function RegisterPublicScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#080808",
+    backgroundColor: "#111111",
   },
   keyboardView: {
     flex: 1,
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingHorizontal: 31,
     gap: 8,
-    backgroundColor: "#080808",
+    backgroundColor: "#111111",
   },
   continueButton: {
     width: 313,

@@ -22,12 +22,7 @@ export function EventAbout({ description }: EventAboutProps) {
       </ThemedText>
 
       {/* Carte de description */}
-      <LinearGradient
-        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.04)"]}
-        start={{ x: 0.16, y: 0 }}
-        end={{ x: 0.84, y: 1 }}
-        style={styles.descriptionCard}
-      >
+
         <View style={styles.descriptionContainer}>
           <ThemedText
             style={styles.descriptionText}
@@ -48,7 +43,6 @@ export function EventAbout({ description }: EventAboutProps) {
             </ThemedText>
           </Pressable>
         )}
-      </LinearGradient>
     </View>
   );
 }
@@ -73,6 +67,11 @@ const styles = StyleSheet.create({
 
   descriptionContainer: {
     position: "relative",
+    backgroundColor: "#212121",
+    borderRadius: 10,
+    padding: 15,
+    gap: 10,
+    overflow: "hidden",
   },
   descriptionText: {
     fontFamily: Fonts.bold,

@@ -125,7 +125,7 @@ export default function EventDetailScreen() {
       </Pressable>
 
       <ParallaxScrollView
-        headerBackgroundColor={{ light: "#080808", dark: "#080808" }}
+        headerBackgroundColor={{ light: "#111111", dark: "#111111" }}
         showsVerticalScrollIndicator={false}
         headerImage={
           <EventHeaderImage
@@ -177,6 +177,7 @@ export default function EventDetailScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.participantsScroll}
+              style={{ overflow: "visible" }}
             >
               {exampleParticipants.map((artist) => (
                 <ArtistVoteCard
@@ -218,37 +219,6 @@ export default function EventDetailScreen() {
           {/* À propos de l'événement */}
           <EventAbout description={event.description} />
 
-          {/* Commentaires */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Commentaires</Text>
-            <View style={styles.commentsContainer}>
-              {exampleComments.map((comment) => (
-                <View key={comment.id} style={styles.commentCard}>
-                  <View style={styles.commentHeader}>
-                    <Image
-                      source={{ uri: comment.avatar }}
-                      style={styles.commentAvatar}
-                    />
-                    <Text style={styles.commentUsername}>{comment.username}</Text>
-                    <Pressable style={styles.commentMore}>
-                      <MoreHorizontal size={16} color="#7B7B7B" />
-                    </Pressable>
-                  </View>
-                  <Text style={styles.commentText}>{comment.text}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Comment Input */}
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Ajoutez un commentaire"
-                placeholderTextColor="#7B7B7B"
-                onFocus={() => guard(() => {})}
-              />
-            </View>
-          </View>
         </ThemedView>
       </ParallaxScrollView>
 
@@ -278,6 +248,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     gap: 24,
+    backgroundColor: "#111111",
   },
   // Title + Countdown
   titleRow: {
@@ -311,6 +282,7 @@ const styles = StyleSheet.create({
   // Sections
   sectionContainer: {
     gap: 12,
+    overflow: "visible",
   },
   sectionTitle: {
     fontFamily: Fonts.regular,
@@ -330,7 +302,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   participateButton: {
-    backgroundColor: "#6F00FF",
+    backgroundColor: "#00F4A3",
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderRadius: 100,
@@ -339,7 +311,7 @@ const styles = StyleSheet.create({
   participateButtonText: {
     fontFamily: Fonts.extraBold,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#006141",
     textAlign: "center",
     letterSpacing: -0.56,
   },
@@ -373,55 +345,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
 
     letterSpacing: -0.56,
-  },
-  // Comments
-  commentsContainer: {
-    gap: 12,
-  },
-  commentCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
-  },
-  commentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  commentAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  commentUsername: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: "#FFFFFF",
-    letterSpacing: -0.24,
-    flex: 1,
-  },
-  commentMore: {
-    padding: 4,
-  },
-  commentText: {
-    fontFamily: Fonts.bold,
-    fontSize: 13,
-    color: "#B8B8B8",
-    letterSpacing: -0.26,
-    lineHeight: 18,
-  },
-  commentInputContainer: {
-    marginTop: 4,
-  },
-  commentInput: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontFamily: Fonts.regular,
-    fontSize: 13,
-    color: "#FFFFFF",
-    letterSpacing: -0.26,
-  },
+  }
 });

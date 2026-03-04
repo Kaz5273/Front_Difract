@@ -42,7 +42,7 @@ export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
 
   return (
     <View style={styles.container}>
-      <Clock size={20} color="#FF8C42" />
+      <Clock size={20} color="#FC5F67" />
       <Text style={styles.timerText}>{timeString}</Text>
     </View>
   );
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#392213",
+    backgroundColor: "#402123",
     borderRadius: 10,
     paddingHorizontal: 8,
     height: 30,
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   timerText: {
     fontFamily: Fonts.regular,
     fontSize: 12,
-    color: "#FF8C42",
+    color: "#FC5F67",
     letterSpacing: -0.24,
   },
 });

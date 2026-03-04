@@ -46,7 +46,7 @@ export default function VoteScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="Vos votes" showBackButton showMenuButton />
 
       <ScrollView
@@ -126,10 +126,15 @@ export default function VoteScreen() {
         {/* Empty state */}
         {isAuthenticated && !isLoading && !error && filteredEvents.length === 0 && (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>
+            <Text style={styles.emptyTitle}>
               {activeTab === "first"
-                ? "Vous n'avez pas encore voté pour un événement en cours."
-                : "Aucun vote terminé."}
+                ? "Vous n'avez aucun vote en cours\npour le moment"
+                : "Vous n'avez aucun vote terminé\npour le moment"}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {activeTab === "first"
+                ? "Rendez-vous dans la section event\npour voter pour une event !"
+                : "Rendez-vous dans la section event\npour voter pour une event !"}
             </Text>
           </View>
         )}
@@ -175,12 +180,13 @@ export default function VoteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingVertical: 10,
     gap: 16,
     paddingBottom: 130,
@@ -209,9 +215,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.24,
   },
   centerContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
     paddingHorizontal: 40,
     gap: 16,
   },
@@ -221,6 +227,21 @@ const styles = StyleSheet.create({
     color: "#7B7B7B",
     textAlign: "center",
     letterSpacing: -0.28,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.32,
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: "#7B7B7B",
+    textAlign: "center",
+    letterSpacing: -0.26,
+    lineHeight: 18,
   },
   retryButton: {
     backgroundColor: "#FC5F67",
@@ -260,14 +281,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   faqText: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     fontSize: 12,
     color: "#7B7B7B",
     textAlign: "center",
     letterSpacing: -0.24,
   },
   faqLink: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     fontSize: 12,
     color: "#FFFFFF",
     textAlign: "center",

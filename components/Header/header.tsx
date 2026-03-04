@@ -10,6 +10,7 @@ import {
 } from "lucide-react-native";
 import React from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "../themed-text";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "../GuestActionModal";
@@ -40,6 +41,7 @@ export function Header({
   rightComponent,
 }: HeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((state) => state.user);
   const { showModal, setShowModal, guard } = useGuestGuard();
 
@@ -60,7 +62,7 @@ export function Header({
   // Mode détail (avec bouton retour + titre + recherche)
   if (variant === "detail") {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.leftSection}>
           <Pressable onPress={handleBackPress} style={styles.iconButton}>
             <ChevronLeft size={32} color="#FFFFFF" />
@@ -82,7 +84,7 @@ export function Header({
 
   // Mode par défaut
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Bouton profile */}
       <View style={styles.leftSection}>
         {showBackButton && (
@@ -133,15 +135,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 50,
+    paddingBottom: 10,
     paddingHorizontal: 10,
-    backgroundColor: "#000000",
+    backgroundColor: "#181818",
   },
   leftSection: {
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
-    gap: 10,
+
   },
   centerSection: {
     flex: 3,

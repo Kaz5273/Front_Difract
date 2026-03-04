@@ -92,6 +92,7 @@ export function MusicPlayer({
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ overflow: "visible" }}
         contentContainerStyle={styles.listContainer}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
@@ -102,6 +103,7 @@ export function MusicPlayer({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
+    overflow: "visible",
   },
   listContainer: {
     paddingRight: 20,

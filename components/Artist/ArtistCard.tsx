@@ -77,7 +77,6 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           </View>
         </ImageBackground>
       </Pressable>
-
       {/* Info Row - Name & Play Button */}
       <View style={styles.infoRow}>
         <View style={styles.nameContainer}>

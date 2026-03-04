@@ -624,7 +624,7 @@ export default function RegisterArtistScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#080808",
+    backgroundColor: "#111111",
   },
   keyboardView: {
     flex: 1,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 40,
     paddingHorizontal: 31,
-    backgroundColor: "#080808",
+    backgroundColor: "#111111",
   },
   continueButton: {
     width: 311,

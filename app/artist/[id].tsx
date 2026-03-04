@@ -84,7 +84,7 @@ export default function ArtistDetailScreen() {
       </Pressable>
 
       <ParallaxScrollView
-        headerBackgroundColor={{ light: "#080808", dark: "#080808" }}
+        headerBackgroundColor={{ light: "#111111", dark: "#111111" }}
         showsVerticalScrollIndicator={false}
         headerImage={
           <ImageCarousel
@@ -97,14 +97,7 @@ export default function ArtistDetailScreen() {
         <ThemedView style={styles.contentContainer}>
           <ThemedView style={styles.titleContainer}>
             <ThemedText style={styles.styleTitle}>{artist.name}</ThemedText>
-            <Pressable
-              onPress={() => guard(() => console.log("Lien commentaires cliqué"))}
-              style={styles.linkButton}
-            >
-              <ThemedText style={[Typography.link, { fontSize: 12 }]}>
-                Voir les commentaires
-              </ThemedText>
-            </Pressable>
+            
           </ThemedView>
 
           {artist.tracks && artist.tracks.length > 0 && (
@@ -171,6 +164,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     gap: 16,
+    backgroundColor: "#111111",
   },
   titleContainer: {
     flexDirection: "row",

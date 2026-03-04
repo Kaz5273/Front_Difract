@@ -4,11 +4,11 @@ import {
   StyleSheet,
   Pressable,
   ImageBackground,
-  Text,
 } from "react-native";
 import { Share } from "lucide-react-native";
 import { BlurView } from "expo-blur";
 import { Fonts, Typography } from "@/constants/theme";
+import { StyleBadges } from "../Badges/StyleBadges";
 
 interface EventHeaderImageProps {
   imageUrl: string;
@@ -34,9 +34,6 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
 
   const { day, dayNum, month } = formatDate(eventDate);
 
-  // Afficher maximum 2 styles
-  const displayStyles = musicStyles.slice(0, 2);
-
   return (
     <ImageBackground
       source={{ uri: imageUrl }}
@@ -58,11 +55,7 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
       <View style={styles.bottomContent}>
         {/* Music Styles en bas à gauche */}
         <View style={styles.stylesContainer}>
-          {displayStyles.map((style, index) => (
-            <BlurView key={index} intensity={15} style={styles.styleBadge}>
-              <Text style={styles.styleText}>{style}</Text>
-            </BlurView>
-          ))}
+          <StyleBadges styles={musicStyles} maxVisible={2} />
         </View>
       </View>
     </ImageBackground>
@@ -74,6 +67,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     justifyContent: "space-between",
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: "hidden",
   },
   image: {
     resizeMode: "cover",

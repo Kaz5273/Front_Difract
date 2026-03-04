@@ -36,7 +36,7 @@ export default function TicketsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="Mes Billets" showBackButton showMenuButton />
       <ScrollView
         style={styles.scrollView}
@@ -93,7 +93,7 @@ export default function TicketsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

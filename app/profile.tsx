@@ -5,6 +5,7 @@ import {
   Text,
   Image,
   ScrollView,
+  Pressable,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,11 +15,14 @@ import {
   KeyboardMusic,
   Ellipsis,
   LogOut,
+  UserPlus,
+  Settings,
 } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { getMediaUrl } from "@/services/api/client";
-import { MenuItem, ProfileHeader } from "@/components/Profile";
+import { MenuItem } from "@/components/Profile";
+import { Header } from "@/components/Header/header";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -36,9 +40,20 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Header */}
-      <ProfileHeader onSettings={() => router.push("/settings")} />
+      <Header
+        title="Mon compte"
+        variant="detail"
+        rightComponent={
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          
+            <Pressable onPress={() => router.push("/settings")} style={{ padding: 8, borderRadius: 8 }}>
+              <Settings size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -105,7 +120,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#080808",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

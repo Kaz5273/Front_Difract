@@ -304,7 +304,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   keyboardView: {
     flex: 1,

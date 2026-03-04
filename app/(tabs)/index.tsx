@@ -210,7 +210,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "top"]}>
+    <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <Header title="Accueil" showBackButton showMenuButton />
 
       <ScrollView
@@ -292,7 +292,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 2,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

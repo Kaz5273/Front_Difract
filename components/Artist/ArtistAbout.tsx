@@ -36,14 +36,6 @@ export function ArtistAbout({
       <ThemedText style={styles.sectionTitle}>À propos de l'artiste</ThemedText>
 
       {/* Carte de description */}
-      <LinearGradient
-        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.04)"]}
-        start={{ x: 0.16, y: 0 }}
-        end={{ x: 0.84, y: 1 }}
-        style={styles.descriptionCard}
-      >
-        <ThemedText style={styles.descriptionTitle}>Description</ThemedText>
-
         <View style={styles.descriptionContainer}>
           <ThemedText
             style={styles.descriptionText}
@@ -51,10 +43,7 @@ export function ArtistAbout({
           >
             {description}
           </ThemedText>
-        </View>
-
-        {/* Bouton "... plus" - affiché seulement si le texte dépasse */}
-        {showExpandButton && (
+          {showExpandButton && (
           <Pressable
             onPress={() => setIsExpanded(!isExpanded)}
             style={styles.expandButton}
@@ -64,7 +53,10 @@ export function ArtistAbout({
             </ThemedText>
           </Pressable>
         )}
-      </LinearGradient>
+        </View>
+
+        {/* Bouton "... plus" - affiché seulement si le texte dépasse */}
+        
 
       {/* Liste des informations */}
       <View style={styles.infoList}>
@@ -122,6 +114,7 @@ const styles = StyleSheet.create({
     padding: 15,
     gap: 10,
     overflow: "hidden",
+    backgroundColor: "#212121",
   },
   artistName: {
     fontFamily: Fonts.semiBold,
@@ -139,6 +132,10 @@ const styles = StyleSheet.create({
   },
   descriptionContainer: {
     position: "relative",
+      borderRadius: 10, 
+    padding: 15,
+    backgroundColor: "#212121",
+    overflow: "hidden",
   },
   descriptionText: {
     fontFamily: Fonts.bold,
@@ -176,7 +173,7 @@ const styles = StyleSheet.create({
     height: 14,
   },
   infoText: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     fontSize: 12,
     lineHeight: 12,
     letterSpacing: -0.24,

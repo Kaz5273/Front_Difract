@@ -12,7 +12,7 @@ export const EarlyAccessBadge: React.FC<EarlyAccessBadgeProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Ticket size={16} color="#FF8C42" />
+      <Ticket size={16} color="#FC5F67" />
       <Text style={styles.text}>Early access</Text>
       {price !== undefined && <Text style={styles.text}>{price}€</Text>}
     </View>
@@ -27,13 +27,13 @@ const styles = StyleSheet.create({
     gap: 4,
     height: 30,
     paddingHorizontal: 8,
-    backgroundColor: "#392213",
+    backgroundColor: "#402123",
     borderRadius: 10,
   },
   text: {
     fontFamily: Fonts.regular,
     fontSize: 12,
-    color: "#FF8C42",
+    color: "#FC5F67",
     letterSpacing: -0.24,
   },
 });

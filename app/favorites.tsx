@@ -79,7 +79,7 @@ export default function FavoritesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header
         title="Vos stars"
         variant="detail"
@@ -161,7 +161,7 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

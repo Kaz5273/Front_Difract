@@ -134,7 +134,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="Recherche" showBackButton showMenuButton />
 
       <ScrollView
@@ -226,7 +226,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

@@ -148,8 +148,6 @@ export const EventCard: React.FC<EventCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    borderRadius: 22,
-    overflow: "hidden",
     gap: 12,
   },
   // Header row

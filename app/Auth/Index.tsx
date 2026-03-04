@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "column",
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   buttonApple: {
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
     paddingVertical: 15,
     paddingHorizontal: 15,
     borderRadius: 50,

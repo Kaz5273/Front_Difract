@@ -94,7 +94,7 @@ export default function EvenementsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <Header title="Événements" showBackButton showMenuButton />
 
       <ScrollView
@@ -160,7 +160,7 @@ export default function EvenementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#111111",
   },
   scrollView: {
     flex: 1,

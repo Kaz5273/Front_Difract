@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Pressable, View, Text } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft, UserPlus, Settings } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/theme";
 
 interface ProfileHeaderProps {
@@ -19,15 +20,16 @@ export function ProfileHeader({
   onAddFriend,
   onSettings,
 }: ProfileHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
-      {/* Titre centré (position absolue pour centrage parfait) */}
-      <Text style={styles.headerTitle}>{title}</Text>
-
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       {/* Bouton retour */}
       <Pressable onPress={() => router.back()} style={styles.backButton}>
         <ChevronLeft size={32} color="#FFFFFF" />
       </Pressable>
+
+      {/* Titre centré */}
+      <Text style={styles.headerTitle}>{title}</Text>
 
       {/* Actions droite - conditionnellement affichées */}
       {showActions ? (
@@ -50,43 +52,41 @@ export function ProfileHeader({
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: "#080808",
+    backgroundColor: "#181818",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    height: 50,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
     position: "relative",
   },
   headerTitle: {
     position: "absolute",
     left: 0,
     right: 0,
+    bottom: 10,
     fontFamily: Fonts.semiBold,
     fontSize: 17,
     color: "#FFFFFF",
     textAlign: "center",
     letterSpacing: -0.34,
+    lineHeight: 40,
   },
   backButton: {
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
     zIndex: 1,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 15,
+    gap: 8,
+    paddingRight: 8,
     zIndex: 1,
   },
   headerIconButton: {
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
     position: "relative",
   },
   notificationBadge: {
