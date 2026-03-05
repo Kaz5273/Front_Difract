@@ -9,7 +9,7 @@ import {
   Star,
 } from "lucide-react-native";
 import React from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "../themed-text";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
@@ -19,6 +19,8 @@ type HeaderVariant = "default" | "detail";
 
 interface HeaderProps {
   title?: string;
+  subtitle?: string;
+  subtitleColor?: string;
   variant?: HeaderVariant;
   showBackButton?: boolean;
   showMenuButton?: boolean;
@@ -31,6 +33,8 @@ interface HeaderProps {
 
 export function Header({
   title,
+  subtitle,
+  subtitleColor,
   variant = "default",
   showBackButton = false,
   showMenuButton = false,
@@ -63,14 +67,22 @@ export function Header({
   if (variant === "detail") {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.leftSection}>
+        <View style={styles.detailLeft}>
           <Pressable onPress={handleBackPress} style={styles.iconButton}>
             <ChevronLeft size={32} color="#FFFFFF" />
           </Pressable>
-          {title && <ThemedText type="header">{title}</ThemedText>}
         </View>
 
-        <View style={styles.rightSection}>
+        <View style={styles.detailCenter}>
+          {title && <ThemedText type="header">{title}</ThemedText>}
+          {subtitle && (
+            <Text style={[styles.headerSubtitle, subtitleColor ? { color: subtitleColor } : undefined]}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.detailRight}>
           {showSearchButton && (
             <Pressable onPress={onSearchPress} style={styles.iconButton}>
               <Search size={24} color="#FFFFFF" />
@@ -164,5 +176,29 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
+  },
+  // Detail variant layout
+  detailLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  detailCenter: {
+    alignItems: "center",
+    gap: 4,
+  },
+  detailRight: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingRight: 8,
+  },
+  headerSubtitle: {
+    fontFamily: "Area-SemiBold",
+    fontSize: 12,
+    color: "#FC5F67",
+    letterSpacing: -0.24,
+    lineHeight: 14,
   },
 });

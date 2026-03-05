@@ -239,8 +239,8 @@ export default function VoteDetailScreen() {
   );
 
   const handleVote = useCallback(() => {
-    console.log("Vote pour:", currentArtist.name, "event:", id);
-  }, [currentArtist, id]);
+    router.push(`/vote/confirm/${id}`);
+  }, [id]);
 
   const handleViewProfile = useCallback(() => {
     router.push(`/artist/${currentArtist.id}`);

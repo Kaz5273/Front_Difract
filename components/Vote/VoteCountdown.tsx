@@ -9,6 +9,7 @@ interface VoteCountdownProps {
 
 export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
   const [timeLeft, setTimeLeft] = useState({
+    days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0,
@@ -19,9 +20,11 @@ export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
       const difference = endDate.getTime() - new Date().getTime();
 
       if (difference > 0) {
-        const totalHours = Math.floor(difference / (1000 * 60 * 60));
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
         setTimeLeft({
-          hours: totalHours,
+          days,
+          hours,
           minutes: Math.floor((difference / 1000 / 60) % 60),
           seconds: Math.floor((difference / 1000) % 60),
         });
@@ -36,9 +39,9 @@ export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
 
   const formatNumber = (num: number) => num.toString().padStart(2, "0");
 
-  const timeString = `${formatNumber(timeLeft.hours)}:${formatNumber(
-    timeLeft.minutes
-  )}:${formatNumber(timeLeft.seconds)}`;
+  const timeString = timeLeft.days > 0
+    ? `${timeLeft.days}j ${formatNumber(timeLeft.hours)}:${formatNumber(timeLeft.minutes)}:${formatNumber(timeLeft.seconds)}`
+    : `${formatNumber(timeLeft.hours)}:${formatNumber(timeLeft.minutes)}:${formatNumber(timeLeft.seconds)}`;
 
   return (
     <View style={styles.container}>

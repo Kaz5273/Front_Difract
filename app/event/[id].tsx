@@ -163,7 +163,7 @@ export default function EventDetailScreen() {
             </View>
           </View>
           <Pressable
-              onPress={() => guard(() => console.log("Participer"))}
+              onPress={() => guard(() => router.push(`/event/participate/${event.id}`))}
               style={styles.participateButton}
             >
               <Text style={styles.participateButtonText}>
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   participateButton: {
-    backgroundColor: "#00F4A3",
+    backgroundColor: "#F9F871",
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderRadius: 100,

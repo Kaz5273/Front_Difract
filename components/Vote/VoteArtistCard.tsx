@@ -18,6 +18,7 @@ interface VoteArtistCardProps {
   imageUrl: string;
   styles: string[];
   isPlaying?: boolean;
+  showControls?: boolean;
   onPlayPress?: () => void;
   onPrevPress?: () => void;
   onNextPress?: () => void;
@@ -29,6 +30,7 @@ export const VoteArtistCard: React.FC<VoteArtistCardProps> = ({
   imageUrl,
   styles: musicStyles,
   isPlaying = false,
+  showControls = true,
   onPlayPress,
   onPrevPress,
   onNextPress,
@@ -49,25 +51,27 @@ export const VoteArtistCard: React.FC<VoteArtistCardProps> = ({
           />
 
           {/* Play Controls - centered */}
-          <View style={cardStyles.controlsRow}>
-            <Pressable onPress={onPrevPress} style={cardStyles.smallControlButton}>
-              <SkipBack size={14} color="#FFFFFF" fill="#FFFFFF" />
-            </Pressable>
+          {showControls && (
+            <View style={cardStyles.controlsRow}>
+              <Pressable onPress={onPrevPress} style={cardStyles.smallControlButton}>
+                <SkipBack size={14} color="#FFFFFF" fill="#FFFFFF" />
+              </Pressable>
 
-            <Pressable onPress={onPlayPress} style={cardStyles.playButton}>
-              <BlurView intensity={20} style={cardStyles.playButtonBlur}>
-                {isPlaying ? (
-                  <Pause size={28} color="#FFFFFF" fill="#FFFFFF" />
-                ) : (
-                  <Play size={28} color="#FFFFFF" fill="#FFFFFF" />
-                )}
-              </BlurView>
-            </Pressable>
+              <Pressable onPress={onPlayPress} style={cardStyles.playButton}>
+                <BlurView intensity={20} style={cardStyles.playButtonBlur}>
+                  {isPlaying ? (
+                    <Pause size={28} color="#FFFFFF" fill="#FFFFFF" />
+                  ) : (
+                    <Play size={28} color="#FFFFFF" fill="#FFFFFF" />
+                  )}
+                </BlurView>
+              </Pressable>
 
-            <Pressable onPress={onNextPress} style={cardStyles.smallControlButton}>
-              <SkipForward size={14} color="#FFFFFF" fill="#FFFFFF" />
-            </Pressable>
-          </View>
+              <Pressable onPress={onNextPress} style={cardStyles.smallControlButton}>
+                <SkipForward size={14} color="#FFFFFF" fill="#FFFFFF" />
+              </Pressable>
+            </View>
+          )}
 
           {/* Bottom content: artist name + track + styles */}
           <View style={cardStyles.bottomContent}>
