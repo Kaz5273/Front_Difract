@@ -9,7 +9,9 @@ import {
   StepSocialLinks,
 } from "@/components/profile-completion/StepSocialLinks";
 import { Fonts } from "@/constants/theme";
+import { getMediaUrl } from "@/services/api/client";
 import { userService } from "@/services/user/user.service";
+import { useAuthStore } from "@/store/auth-store";
 import { ChevronLeft } from "lucide-react-native";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { router } from "expo-router";
@@ -26,9 +28,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Step = "photos" | "tracks" | "social" | "recap";
-const STEPS: Step[] = ["photos", "tracks", "social", "recap"];
+const ARTIST_STEPS: Step[] = ["photos", "tracks", "social", "recap"];
+const PUBLIC_STEPS: Step[] = ["photos", "recap"];
 
 export default function ProfileCompletionScreen() {
+  const user = useAuthStore((s) => s.user);
+  const role: 'PUBLIC' | 'ARTIST' = user?.role === 'PUBLIC' ? 'PUBLIC' : 'ARTIST';
+  const existingProfilePhotoUrl = role === 'PUBLIC'
+    ? (user?.media?.find((m) => m.role === 'PROFILE' && m.is_primary)
+        ? getMediaUrl(user.media.find((m) => m.role === 'PROFILE' && m.is_primary)!)
+        : user?.media_url ?? null)
+    : null;
+  const STEPS = role === 'PUBLIC' ? PUBLIC_STEPS : ARTIST_STEPS;
   const [currentStep, setCurrentStep] = useState<Step>("photos");
   const [photos, setPhotos] = useState<ImagePickerAsset[]>([]);
   const [tracks, setTracks] = useState<TrackItem[]>([]);
@@ -90,25 +101,39 @@ export default function ProfileCompletionScreen() {
     if (photos.length > 0) {
       try {
         const photoFormData = new FormData();
-        photos.forEach((photo, index) => {
-          // iOS renvoie souvent du HEIC que le serveur refuse
-          // On normalise en JPEG (ImagePicker retourne déjà du JPEG compressé)
+        if (role === 'PUBLIC') {
+          // Photo de profil unique
+          const photo = photos[0];
           const mimeType = photo.mimeType?.toLowerCase() || "image/jpeg";
-          const isAccepted = ["image/jpeg", "image/png", "image/jpg", "image/gif"].includes(mimeType);
+          const isAccepted = ["image/jpeg", "image/png", "image/jpg"].includes(mimeType);
           const finalType = isAccepted ? mimeType : "image/jpeg";
           const ext = finalType === "image/png" ? "png" : "jpg";
-
-          photoFormData.append("images[]", {
+          photoFormData.append("image", {
             uri: photo.uri,
             type: finalType,
-            name: photo.fileName?.replace(/\.heic$/i, `.${ext}`) || `gallery_${index}_${Date.now()}.${ext}`,
+            name: photo.fileName?.replace(/\.heic$/i, `.${ext}`) || `profile_${Date.now()}.${ext}`,
           } as any);
-        });
-        await userService.uploadGallery(photoFormData);
-        console.log("✅ Gallery uploaded successfully");
+          await userService.uploadProfilePicture(photoFormData);
+          console.log("✅ Profile picture uploaded successfully");
+        } else {
+          // Galerie artiste
+          photos.forEach((photo, index) => {
+            const mimeType = photo.mimeType?.toLowerCase() || "image/jpeg";
+            const isAccepted = ["image/jpeg", "image/png", "image/jpg", "image/gif"].includes(mimeType);
+            const finalType = isAccepted ? mimeType : "image/jpeg";
+            const ext = finalType === "image/png" ? "png" : "jpg";
+            photoFormData.append("images[]", {
+              uri: photo.uri,
+              type: finalType,
+              name: photo.fileName?.replace(/\.heic$/i, `.${ext}`) || `gallery_${index}_${Date.now()}.${ext}`,
+            } as any);
+          });
+          await userService.uploadGallery(photoFormData);
+          console.log("✅ Gallery uploaded successfully");
+        }
       } catch (err: any) {
-        console.error("❌ Gallery upload failed:", err?.response?.data || err);
-        errors.push("photos de galerie");
+        console.error("❌ Photo upload failed:", err?.response?.data || err);
+        errors.push(role === 'PUBLIC' ? "photo de profil" : "photos de galerie");
       }
     }
 
@@ -122,7 +147,7 @@ export default function ProfileCompletionScreen() {
             type: track.file.mimeType || "audio/mpeg",
             name: track.file.name,
           } as any);
-          trackFormData.append("names[]", track.name);
+          trackFormData.append("titles[]", track.name);
         });
         await userService.uploadTracks(trackFormData);
         console.log("✅ Tracks uploaded successfully");
@@ -184,7 +209,7 @@ export default function ProfileCompletionScreen() {
         showsVerticalScrollIndicator={false}
       >
         {currentStep === "photos" && (
-          <StepGalleryPhotos photos={photos} onUpdate={setPhotos} />
+          <StepGalleryPhotos photos={photos} onUpdate={setPhotos} role={role} existingPhotoUrl={existingProfilePhotoUrl} />
         )}
         {currentStep === "tracks" && (
           <StepAdditionalTracks tracks={tracks} onUpdate={setTracks} />

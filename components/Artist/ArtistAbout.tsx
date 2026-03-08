@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
-import { MapPin, Theater, UsersRound, Mic, Users } from "lucide-react-native";
+
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Fonts } from "@/constants/theme";
@@ -8,26 +8,14 @@ import { LinearGradient } from "expo-linear-gradient";
 
 interface ArtistAboutProps {
   description: string;
-  location: string;
-  distance?: string;
-  pastShows: number;
-  yearsActive: number;
-  instruments: string;
-  playsWithOthers?: boolean;
 }
 
 export function ArtistAbout({
   description,
-  location,
-  distance,
-  pastShows,
-  yearsActive,
-  instruments,
-  playsWithOthers = false,
 }: ArtistAboutProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  // Environ 45 caractères par ligne × 6 lignes = 270 caractères
-  const MAX_CHARS = 315;
+  // ~38 chars/ligne × 8 lignes = 300 chars (hauteur par défaut du container)
+  const MAX_CHARS = 300;
   const showExpandButton = description.length > MAX_CHARS;
 
   return (
@@ -39,7 +27,7 @@ export function ArtistAbout({
         <View style={styles.descriptionContainer}>
           <ThemedText
             style={styles.descriptionText}
-            numberOfLines={isExpanded ? undefined : 6}
+            numberOfLines={isExpanded ? undefined : 8}
           >
             {description}
           </ThemedText>
@@ -58,52 +46,17 @@ export function ArtistAbout({
         {/* Bouton "... plus" - affiché seulement si le texte dépasse */}
         
 
-      {/* Liste des informations */}
-      <View style={styles.infoList}>
-        <InfoItem
-          icon={<MapPin size={14} color="#D7D7D7" />}
-          text={distance ? `${location} - ${distance}` : location}
-        />
-        <InfoItem
-          icon={<Theater size={14} color="#D7D7D7" />}
-          text={`${pastShows} représentations passées`}
-        />
-        <InfoItem
-          icon={<UsersRound size={14} color="#D7D7D7" />}
-          text={`Exerce depuis ${yearsActive} ans`}
-        />
-        <InfoItem icon={<Mic size={14} color="#D7D7D7" />} text={instruments} />
-        {playsWithOthers && (
-          <InfoItem
-            icon={<Users size={14} color="#D7D7D7" />}
-            text="Joue avec d'autres musiciens"
-          />
-        )}
-      </View>
     </View>
   );
 }
 
-interface InfoItemProps {
-  icon: React.ReactNode;
-  text: string;
-}
-
-function InfoItem({ icon, text }: InfoItemProps) {
-  return (
-    <View style={styles.infoItem}>
-      <View style={styles.iconContainer}>{icon}</View>
-      <ThemedText style={styles.infoText}>{text}</ThemedText>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
     gap: 15,
   },
   sectionTitle: {
-    fontFamily: Fonts.normalBlack,
+    fontFamily: Fonts.regular,
     fontSize: 17,
     lineHeight: 17,
     letterSpacing: -0.68,
@@ -132,8 +85,9 @@ const styles = StyleSheet.create({
   },
   descriptionContainer: {
     position: "relative",
-      borderRadius: 10, 
+    borderRadius: 10,
     padding: 15,
+    minHeight: 190,
     backgroundColor: "#212121",
     overflow: "hidden",
   },

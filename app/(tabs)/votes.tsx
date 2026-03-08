@@ -6,7 +6,7 @@ import { Header } from "@/components/Header/header";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
 import { TabSelector } from "@/components/Button/TabSelector";
 import { CalendarBadge } from "@/components/Badges/CalendarBadge";
-import { CalendarModal } from "@/components/Calendar/CalendarModal";
+import { CalendarModal, QuickFilter } from "@/components/Calendar/CalendarModal";
 import FilterBadge from "@/components/Badges/FilterBadge";
 import { VoteSection } from "@/components/Vote/VoteSection";
 import { ArrowDownUp } from "lucide-react-native";
@@ -15,6 +15,7 @@ import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
 import { useVotes } from "@/hooks/use-votes";
 import { useAuthStore } from "@/store/auth-store";
+import { locationService } from "@/services/location/location.service";
 
 function formatEventDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -27,8 +28,12 @@ export default function VoteScreen() {
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [activeQuickFilter, setActiveQuickFilter] = useState<QuickFilter | null>(null);
+  const [quickFilterLabel, setQuickFilterLabel] = useState<string | undefined>(undefined);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const [displayCity, setDisplayCity] = useState("Ma localisation");
   const { groupedByEvent, isLoading, error, fetchMyVotes } = useVotes();
 
   useEffect(() => {
@@ -37,12 +42,27 @@ export default function VoteScreen() {
     }
   }, [isAuthenticated]);
 
-  // Filtrer par onglet : "en cours" = événements PUBLISHED, "terminé" = DONE
-  const filteredEvents = groupedByEvent.filter((group) => {
-    if (activeTab === "first") {
-      return group.event.status !== "DONE";
+  useEffect(() => {
+    if (user?.city) {
+      setDisplayCity(user.city);
+    } else {
+      locationService.getCachedLocation().then(async (coords) => {
+        if (!coords) return;
+        const city = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+        if (city) setDisplayCity(city);
+      });
     }
-    return group.event.status === "DONE";
+  }, [user?.city]);
+
+  // Filtrer par onglet
+  // "Vote en cours" : event PUBLISHED (vote ouvert ou non encore terminé)
+  // "Vote terminé"  : event DONE
+  const filteredEvents = groupedByEvent.filter((group) => {
+    const { status } = group.event;
+    if (activeTab === "first") {
+      return status === "PUBLISHED";
+    }
+    return status === "DONE";
   });
 
   return (
@@ -56,10 +76,19 @@ export default function VoteScreen() {
         {/* Filter badges row */}
         <View style={styles.badgesContainer}>
           <LocationBadge
-            location="Annecy"
+            location={displayCity}
             onPress={() => guard(() => console.log("Change location"))}
           />
-          <CalendarBadge onPress={() => guard(() => setCalendarVisible(true))} />
+          <CalendarBadge
+            onPress={() => guard(() => setCalendarVisible(true))}
+            selectedDate={selectedDate}
+            filterLabel={quickFilterLabel}
+            onClear={() => {
+              setSelectedDate(undefined);
+              setActiveQuickFilter(null);
+              setQuickFilterLabel(undefined);
+            }}
+          />
           <FilterBadge onPress={() => guard(() => console.log("Open filters"))} />
           <Pressable
             style={styles.sortButton}
@@ -74,9 +103,16 @@ export default function VoteScreen() {
           visible={calendarVisible}
           onClose={() => setCalendarVisible(false)}
           selectedDate={selectedDate}
+          activeQuickFilter={activeQuickFilter}
           onSelectDate={(date) => {
             setSelectedDate(date);
-            setCalendarVisible(false);
+            setActiveQuickFilter(null);
+            setQuickFilterLabel(undefined);
+          }}
+          onSelectQuickFilter={(type, label) => {
+            setActiveQuickFilter(type);
+            setQuickFilterLabel(label);
+            setSelectedDate(undefined);
           }}
         />
 

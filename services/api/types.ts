@@ -13,10 +13,13 @@ export interface User {
   postal_code?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location_tracking_enabled?: boolean;
   votes_count: number;
   created_at: string;
   updated_at: string;
   media?: Media[];
+  styles?: Array<{ id: number; name: string; pivot?: { is_primary: boolean } }>;
+  social_links?: SocialLink[];
 }
 
 // ============================================
@@ -31,14 +34,32 @@ export type AdminUser = User & { role: 'ADMIN' };
 // ============================================
 export interface Event {
   id: number;
-  name: string;
+  title: string;
   description?: string;
-  date: string;
   location: string;
-  image_url?: string;
+  address?: string;
+  event_date: string;
+  end_time?: string | null;
+  price?: string | null;
+  status: 'DRAFT' | 'PUBLISHED' | 'DONE';
+  type?: 'classic' | 'special';
+  image_url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  capacity?: number | null;
+  voting_start_date?: string | null;
+  voting_end_date?: string | null;
+  early_access_stock?: number | null;
+  standard_stock?: number | null;
+  last_minute_stock?: number | null;
+  is_voting_open?: boolean;
+  voting_time_remaining?: number | null;
+  distance_km?: number;
+  artists?: Artist[];
+  votes?: Vote[];
+  styles?: { id: number; name: string }[];
   created_at: string;
   updated_at: string;
-  artists?: Artist[]; // Artistes associés à l'événement
 }
 
 // ============================================
@@ -70,7 +91,10 @@ export interface VoteEvent {
   location: string;
   event_date: string;
   image_url: string | null;
-  status: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'DONE';
+  voting_start_date?: string | null;
+  voting_end_date?: string | null;
+  is_voting_open?: boolean;
 }
 
 export interface VoteArtist {
@@ -159,8 +183,9 @@ export interface Media {
   user_id: number;
   type: MediaType;
   role: MediaRole;
+  title?: string | null;
   url?: string;
-  path: string;
+  path?: string;
   is_primary: boolean;
   position: number | null;
   created_at: string;

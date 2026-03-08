@@ -1,111 +1,179 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Pressable,
+  Switch,
   View,
   Text,
   Image,
   ScrollView,
+  Alert,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronRight,
-  Piano,
   CircleHelp,
   ShieldCheck,
   BellDot,
   BookOpenText,
-  MoreHorizontal,
   LogOut,
+  MapPin,
+  Pencil,
 } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
-import { ProfileHeader } from "@/components/Profile";
-
-interface SettingsItemProps {
-  icon: React.ComponentType<{ size: number; color: string }>;
-  label: string;
-  showChevron?: boolean;
-  onPress?: () => void;
-}
-
-function SettingsItem({
-  icon: Icon,
-  label,
-  showChevron = true,
-  onPress,
-}: SettingsItemProps) {
-  return (
-    <>
-      <Pressable style={styles.settingsItem} onPress={onPress}>
-        <View style={styles.settingsItemLeft}>
-          <Icon size={24} color="#FFFFFF" />
-          <Text style={styles.settingsItemLabel}>{label}</Text>
-        </View>
-        {showChevron && <ChevronRight size={18} color="#FFFFFF" />}
-      </Pressable>
-      <View style={styles.separator} />
-    </>
-  );
-}
+import { Header } from "@/components/Header/header";
+import { getMediaUrl } from "@/services/api/client";
+import { locationService } from "@/services/location/location.service";
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
+  const [locationEnabled, setLocationEnabled] = useState(false);
 
-  const userUsername =
-    user?.name?.toLowerCase().replace(/\s+/g, "_") || "victorien_mouton";
-  const userEmail = user?.email || "victorien.mouton.etud@gmail.com";
-  const userAvatar = user?.media_url || "https://i.pravatar.cc/150?img=8";
+  useEffect(() => {
+    locationService.isLocationActive().then(setLocationEnabled);
+  }, []);
+
+  const handleLocationToggle = async (value: boolean) => {
+    if (value) {
+      // Activer : demander la permission OS si pas encore accordée
+      const granted = await locationService.requestPermission();
+      if (granted) {
+        setLocationEnabled(true);
+        locationService.setTrackingEnabled(true).catch(() => {});
+      } else {
+        Alert.alert(
+          "Localisation refusée",
+          "Pour activer la géolocalisation, autorisez l'accès dans les réglages de votre téléphone.",
+          [
+            { text: "Annuler", style: "cancel" },
+            { text: "Ouvrir les réglages", onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+    } else {
+      // Désactiver : sauvegarder la préférence et notifier le backend
+      setLocationEnabled(false);
+      locationService.setTrackingEnabled(false).catch(() => {});
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
     router.replace("/Auth/Login");
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={["left", "right", "top"]}>
-      {/* Header avec seulement le bouton retour */}
-      <ProfileHeader title="Paramètre du compte" showActions={false} />
+  const profileMedia = user?.media?.find((m) => m.role === "PROFILE" && m.is_primary);
+  const userAvatar = profileMedia ? getMediaUrl(profileMedia) : user?.media_url ?? null;
+  const userDisplayName = user?.name || "Utilisateur";
+  const userUsername = user?.name?.toLowerCase().replace(/\s+/g, "_") || "utilisateur";
+  const userEmail = user?.email || "";
 
-      {/* Contenu de la page */}
+  return (
+    <SafeAreaView style={styles.container} edges={[]}>
+      <Header title="Paramètre du compte" variant="detail" />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section utilisateur */}
-        <Pressable style={styles.userSection}>
-          <View style={styles.userInfo}>
-            <Image source={{ uri: userAvatar }} style={styles.userAvatar} />
-            <View style={styles.userTextInfo}>
-              <Text style={styles.userUsername}>@{userUsername}</Text>
-              <Text style={styles.userEmail}>{userEmail}</Text>
-            </View>
-          </View>
-          <ChevronRight size={18} color="#FFFFFF" />
-        </Pressable>
+        {/* Profile completion */}
+        <Text style={styles.completionText}>Compléter votre profil (Étapes 1/5)</Text>
 
-        {/* Liste des paramètres */}
+        {/* Avatar section */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarWrapper}>
+            {userAvatar ? (
+              <Image source={{ uri: userAvatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]} />
+            )}
+            {user?.role !== "ARTIST" && (
+              <Pressable style={styles.editButton} onPress={() => router.push("/profile-completion")}>
+                <Pencil size={15} color="#FFFFFF" />
+              </Pressable>
+            )}
+          </View>
+          <View style={styles.avatarInfo}>
+            <Text style={styles.displayName}>{userDisplayName}</Text>
+            <Text style={styles.usernameSmall}>@{userUsername}</Text>
+          </View>
+        </View>
+
+        {/* Settings list */}
         <View style={styles.settingsList}>
+
+          {/* Account row */}
+          <Pressable style={styles.settingsItem}>
+            <View style={styles.settingsItemLeft}>
+              <View>
+                <Text style={styles.accountUsername}>@{userUsername}</Text>
+                <Text style={styles.accountEmail}>{userEmail}</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color="#FFFFFF" />
+          </Pressable>
           <View style={styles.separator} />
 
-          <SettingsItem
-            icon={Piano}
-            label="Passer à un compte professionnelle"
-          />
+          {/* FAQ */}
+          <Pressable style={styles.settingsItem}>
+            <View style={styles.settingsItemLeft}>
+              <CircleHelp size={24} color="#FFFFFF" />
+              <Text style={styles.settingsItemLabel}>Foire aux questions</Text>
+            </View>
+            <ChevronRight size={18} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.separator} />
 
-          <SettingsItem icon={CircleHelp} label="Foire aux questions" />
+          {/* Confidentialité */}
+          <Pressable style={styles.settingsItem}>
+            <View style={styles.settingsItemLeft}>
+              <ShieldCheck size={24} color="#FFFFFF" />
+              <Text style={styles.settingsItemLabel}>Confidentialité et partage</Text>
+            </View>
+            <ChevronRight size={18} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.separator} />
 
-          <SettingsItem icon={ShieldCheck} label="Confidentialité et partage" />
+          {/* Notifications */}
+          <Pressable style={styles.settingsItem}>
+            <View style={styles.settingsItemLeft}>
+              <BellDot size={24} color="#FFFFFF" />
+              <Text style={styles.settingsItemLabel}>Notifications</Text>
+            </View>
+            <ChevronRight size={18} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.separator} />
 
-          <SettingsItem icon={BellDot} label="Notifications" />
+          {/* Géolocalisation */}
+          <Pressable style={styles.settingsItem} onPress={() => handleLocationToggle(!locationEnabled)}>
+            <View style={styles.settingsItemLeft}>
+              <MapPin size={24} color="#FFFFFF" />
+              <Text style={styles.settingsItemLabel}>Géolocalisation</Text>
+            </View>
+            <Switch
+              value={locationEnabled}
+              onValueChange={handleLocationToggle}
+              trackColor={{ false: "#3A3A3A", true: "#FC5F67" }}
+              thumbColor="#FFFFFF"
+            />
+          </Pressable>
+          <View style={styles.separator} />
 
-          <SettingsItem icon={BookOpenText} label="Conditions d'utilisations" />
+          {/* Conditions */}
+          <Pressable style={styles.settingsItem}>
+            <View style={styles.settingsItemLeft}>
+              <BookOpenText size={24} color="#FFFFFF" />
+              <Text style={styles.settingsItemLabel}>Conditions d'utilisations</Text>
+            </View>
+            <ChevronRight size={18} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.separator} />
 
-          <SettingsItem icon={MoreHorizontal} label="À propos" />
-
-          {/* Bouton Déconnexion centré */}
+          {/* Logout */}
           <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <LogOut size={24} color="#FFFFFF" />
             <Text style={styles.settingsItemLabel}>Déconnexion</Text>
@@ -125,50 +193,72 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 15,
-    paddingVertical: 14,
-    gap: 20,
+    paddingHorizontal: 16,
+    paddingTop: 32,
+    paddingBottom: 60,
+    gap: 32,
   },
-  // Section utilisateur
-  userSection: {
+  completionText: {
+    fontFamily: Fonts.bold,
+    fontSize: 12,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.24,
+  },
+  // Avatar
+  avatarSection: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 16,
   },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
+  avatarWrapper: {
+    position: "relative",
+    width: 80,
+    height: 80,
   },
-  userAvatar: {
-    width: 32,
-    height: 32,
+  avatar: {
+    width: 80,
+    height: 80,
     borderRadius: 44,
   },
-  userTextInfo: {
-    gap: 2,
+  avatarPlaceholder: {
+    backgroundColor: "#333333",
   },
-  userUsername: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 17,
+  editButton: {
+    position: "absolute",
+    bottom: 0,
+    left: 53,
+    width: 33,
+    height: 33,
+    borderRadius: 33,
+    backgroundColor: "#333333",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInfo: {
+    gap: 8,
+  },
+  displayName: {
+    fontFamily: Fonts.regular,
+    fontSize: 24,
     color: "#FFFFFF",
-    letterSpacing: -0.68,
+    letterSpacing: -0.32,
   },
-  userEmail: {
+  usernameSmall: {
     fontFamily: Fonts.bold,
-    fontSize: 10,
-    color: "#B3B3B3",
-    letterSpacing: -0.4,
+    fontSize: 12,
+    color: "#D7D7D7",
+    letterSpacing: -0.2,
   },
-  // Liste des paramètres
+  // Settings list
   settingsList: {
-    paddingVertical: 10,
+    gap: 0,
   },
   settingsItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   settingsItemLeft: {
     flexDirection: "row",
@@ -176,10 +266,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   settingsItemLabel: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.regular,
     fontSize: 14,
     color: "#FFFFFF",
-    letterSpacing: -0.56,
+    letterSpacing: -0.28,
+  },
+  accountUsername: {
+    fontFamily: Fonts.regular,
+    fontSize: 24,
+    color: "#FFFFFF",
+    letterSpacing: -0.32,
+  },
+  accountEmail: {
+    fontFamily: Fonts.bold,
+    fontSize: 12,
+    color: "#B3B3B3",
+    letterSpacing: -0.2,
+    marginTop: 2,
   },
   separator: {
     height: 1,
@@ -190,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    paddingVertical: 14,
-    marginTop: 10,
+    paddingVertical: 20,
+    marginTop: 8,
   },
 });

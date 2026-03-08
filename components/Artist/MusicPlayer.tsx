@@ -1,9 +1,8 @@
-import React from "react";
-import { View, StyleSheet, Pressable, FlatList } from "react-native";
+import React, { useEffect } from "react";
+import { View, StyleSheet, Pressable, FlatList, Image } from "react-native";
 import { Play, Pause } from "lucide-react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 
 interface Track {
@@ -26,7 +25,21 @@ export function MusicPlayer({
   artistImage,
   onBeforePlay,
 }: MusicPlayerProps) {
-  const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
+  const { currentTrack, isPlaying, play, pause, setPlaylist } = useAudioPlayer();
+
+  // Enregistre la playlist dans le contexte pour que next/prev fonctionnent
+  useEffect(() => {
+    setPlaylist(
+      tracks.map((t) => ({
+        id: t.id,
+        title: t.title,
+        artistName,
+        artistImage,
+        duration: t.duration,
+        url: t.url,
+      }))
+    );
+  }, [tracks, artistName, artistImage]);
 
   const togglePlay = (track: Track) => {
     const action = () => {
@@ -51,32 +64,30 @@ export function MusicPlayer({
   };
 
   const renderTrack = ({ item, index }: { item: Track; index: number }) => {
-    const isTrackPlaying = currentTrack?.id === item.id && isPlaying;
+    const isActive = currentTrack?.id === item.id;
+    const isTrackPlaying = isActive && isPlaying;
 
     return (
-      <LinearGradient
-        colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.04)"]}
-        start={{ x: 0.16, y: 0 }}
-        end={{ x: 0.84, y: 1 }}
-        style={styles.trackContainer}
-      >
-        <Pressable style={styles.playButton} onPress={() => togglePlay(item)}>
+      <View style={styles.trackContainer}>
+        <Image source={{ uri: artistImage }} style={styles.artistImage} />
+
+        <View style={styles.textContainer}>
+          <ThemedText style={styles.trackTitle} numberOfLines={1}>
+            {item.title}
+          </ThemedText>
+        </View>
+
+        <Pressable
+          style={[styles.playButton, isActive && styles.playButtonActive]}
+          onPress={() => togglePlay(item)}
+        >
           {isTrackPlaying ? (
             <Pause size={16} color="#FFFFFF" fill="#FFFFFF" />
           ) : (
             <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
           )}
         </Pressable>
-
-        <View style={styles.trackInfo}>
-          <ThemedText style={styles.trackNumber}>{index + 1}.</ThemedText>
-          <ThemedText style={styles.trackTitle} numberOfLines={1}>
-            {item.title}
-          </ThemedText>
-        </View>
-
-        <ThemedText style={styles.trackDuration}>{item.duration}</ThemedText>
-      </LinearGradient>
+      </View>
     );
   };
 
@@ -114,41 +125,45 @@ const styles = StyleSheet.create({
   trackContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    gap: 10,
-    width: 250,
+    padding: 5,
+    paddingRight: 12,
+    borderRadius: 20,
+    backgroundColor: "#161616",
+    width: 280,
+    gap: 8,
   },
-  playButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(252, 95, 103, 1)",
-    justifyContent: "center",
-    alignItems: "center",
+  artistImage: {
+    width: 45,
+    height: 45,
+    borderRadius: 18,
   },
-  trackInfo: {
+  textContainer: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    overflow: "hidden",
-  },
-  trackNumber: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 14,
-    color: "#FFFFFF",
+    minWidth: 0,
   },
   trackTitle: {
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     fontSize: 14,
-    color: "#FFFFFF",
-    flex: 1,
+    letterSpacing: -0.48,
+    color: "rgba(255, 255, 255, 0.70)",
   },
-  trackDuration: {
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    color: "#B8B8B8",
+  trackNumber: {
+    fontFamily: Fonts.bold,
+    fontSize: 11,
+    letterSpacing: -0.4,
+    marginTop: -4,
+    color: "rgba(255, 255, 255, 0.7)",
+  },
+  playButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingLeft: 1,
+  },
+  playButtonActive: {
+    backgroundColor: "#FC5F67",
   },
 });

@@ -17,19 +17,24 @@ import {
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const ITEM_GAP = 10;
 const CAROUSEL_WIDTH = SCREEN_WIDTH - 30;
-const CAROUSEL_HEIGHT = 150;
+
 const MAX_PHOTOS = 5;
 const MAX_FILE_SIZE_MB = 5;
 
 interface StepGalleryPhotosProps {
   photos: ImagePicker.ImagePickerAsset[];
   onUpdate: (photos: ImagePicker.ImagePickerAsset[]) => void;
+  role?: 'PUBLIC' | 'ARTIST';
+  existingPhotoUrl?: string | null;
 }
 
 export function StepGalleryPhotos({
   photos,
   onUpdate,
+  role = 'ARTIST',
+  existingPhotoUrl,
 }: StepGalleryPhotosProps) {
+  const isPublic = role === 'PUBLIC';
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -46,8 +51,9 @@ export function StepGalleryPhotos({
   ).current;
 
   const pickImage = async () => {
-    if (photos.length >= MAX_PHOTOS) {
-      Alert.alert("Limite atteinte", `Vous pouvez ajouter ${MAX_PHOTOS} photos maximum.`);
+    const maxPhotos = isPublic ? 1 : MAX_PHOTOS;
+    if (!isPublic && photos.length >= maxPhotos) {
+      Alert.alert("Limite atteinte", `Vous pouvez ajouter ${maxPhotos} photos maximum.`);
       return;
     }
 
@@ -62,21 +68,26 @@ export function StepGalleryPhotos({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_PHOTOS - photos.length,
+      allowsMultipleSelection: !isPublic,
+      selectionLimit: isPublic ? 1 : maxPhotos - photos.length,
+      allowsEditing: isPublic,
+      aspect: isPublic ? [1, 1] : undefined,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const newPhotos = [...photos, ...result.assets].slice(0, MAX_PHOTOS);
-      onUpdate(newPhotos);
-      // Scroll to the newly added photo
-      setTimeout(() => {
-        flatListRef.current?.scrollToIndex({
-          index: newPhotos.length - 1,
-          animated: true,
-        });
-      }, 100);
+      if (isPublic) {
+        onUpdate([result.assets[0]]);
+      } else {
+        const newPhotos = [...photos, ...result.assets].slice(0, maxPhotos);
+        onUpdate(newPhotos);
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index: newPhotos.length - 1,
+            animated: true,
+          });
+        }, 100);
+      }
     }
   };
 
@@ -97,14 +108,6 @@ export function StepGalleryPhotos({
     }
   };
 
-  const removePhoto = (index: number) => {
-    const updated = photos.filter((_, i) => i !== index);
-    onUpdate(updated);
-    if (activeIndex >= updated.length && updated.length > 0) {
-      setActiveIndex(updated.length - 1);
-    }
-  };
-
   const renderCarouselItem = ({
     item,
     index,
@@ -120,7 +123,7 @@ export function StepGalleryPhotos({
         onPress={() => replacePhoto(index)}
         style={styles.pencilButton}
       >
-        <Pencil size={24} color="#FFFFFF" />
+        <Pencil size={24} color="#161616" />
       </Pressable>
     </View>
   );
@@ -131,6 +134,48 @@ export function StepGalleryPhotos({
       <Text style={styles.emptyText}>Aucune photo ajoutée</Text>
     </View>
   );
+
+  if (isPublic) {
+    const profilePhoto = photos[0] ?? null;
+    const displayUri = profilePhoto?.uri ?? existingPhotoUrl ?? null;
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Photo de profil</Text>
+
+        {/* Profile photo preview */}
+        <Pressable onPress={pickImage} style={styles.profilePhotoWrapper}>
+          {displayUri ? (
+            <>
+              <Image source={{ uri: displayUri }} style={styles.profilePhoto} />
+              <View style={styles.profileEditBadge}>
+                <Pencil size={16} color="#161616" />
+              </View>
+            </>
+          ) : (
+            <View style={styles.profilePhotoEmpty}>
+              <ImageIcon size={48} color="#666" />
+              <Text style={styles.emptyText}>Aucune photo</Text>
+            </View>
+          )}
+        </Pressable>
+
+        {/* Upload button */}
+        <Pressable onPress={pickImage} style={styles.uploadButton}>
+          <Text style={styles.uploadButtonText}>
+            {displayUri ? "Changer la photo" : "Cliquez pour upload"}
+          </Text>
+        </Pressable>
+
+        {/* Helper text */}
+        <View style={styles.helperContainer}>
+          <Text style={styles.helperText}>
+            Le fichier ne doit pas dépasser {MAX_FILE_SIZE_MB} mo
+          </Text>
+          <Text style={styles.helperText}>Fichier PNG ou JPG.</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -237,7 +282,7 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 25,
-    backgroundColor: "#787878",
+    backgroundColor: "#F9F871",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -310,5 +355,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.bold,
     color: "rgba(255, 255, 255, 0.5)",
+  },
+
+  // Profile photo (PUBLIC mode)
+  profilePhotoWrapper: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    position: "relative",
+  },
+  profilePhoto: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    resizeMode: "cover",
+  },
+  profilePhotoEmpty: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "#1A1A1A",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  profileEditBadge: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FC5F67",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

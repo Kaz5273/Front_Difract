@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   CircleUserRound,
   Search,
+  Sparkle,
   Star,
 } from "lucide-react-native";
 import React from "react";
@@ -128,12 +129,9 @@ export function Header({
             onPress={() => guard(() => router.push("/favorites"))}
             style={styles.iconButton}
           >
-            <Star size={24} color="#FFFFFF" />
+            <Sparkle size={24} color="#FFFFFF" />
           </Pressable>
         )}
-        <Pressable onPress={onMenuPress} style={styles.iconButton}>
-          <Bell size={24} color="#FFFFFF" />
-        </Pressable>
         {rightComponent}
       </View>
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />

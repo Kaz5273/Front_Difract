@@ -10,114 +10,127 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 
+export type QuickFilter = "weekend" | "month";
+
 interface CalendarModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectDate?: (date: Date) => void;
+  onSelectQuickFilter?: (type: QuickFilter, label: string, start: Date, end: Date) => void;
   selectedDate?: Date;
+  activeQuickFilter?: QuickFilter | null;
 }
 
 const DAYS_OF_WEEK = ["Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.", "Dim."];
 const MONTHS = [
-  "janvier",
-  "février",
-  "mars",
-  "avril",
-  "mai",
-  "juin",
-  "juillet",
-  "août",
-  "septembre",
-  "octobre",
-  "novembre",
-  "décembre",
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
 ];
+
+function getWeekendDates(): { start: Date; end: Date } {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+  const daysToSat = day === 6 ? 0 : day === 0 ? 6 : 6 - day;
+  const saturday = new Date(today);
+  saturday.setDate(today.getDate() + daysToSat);
+  saturday.setHours(0, 0, 0, 0);
+  const sunday = new Date(saturday);
+  sunday.setDate(saturday.getDate() + 1);
+  return { start: saturday, end: sunday };
+}
+
+function getMonthDates(): { start: Date; end: Date } {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return { start, end };
+}
 
 export const CalendarModal: React.FC<CalendarModalProps> = ({
   visible,
   onClose,
   onSelectDate,
+  onSelectQuickFilter,
   selectedDate,
+  activeQuickFilter,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [quickFilter, setQuickFilter] = useState<"weekend" | "month" | null>(
-    null
-  );
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Obtenir le premier jour du mois (0 = Dimanche, on veut Lundi = 0)
   const getFirstDayOfMonth = (year: number, month: number) => {
     const firstDay = new Date(year, month, 1).getDay();
-    // Convertir de Dimanche=0 à Lundi=0
     return firstDay === 0 ? 6 : firstDay - 1;
   };
 
-  // Obtenir le nombre de jours dans le mois
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
 
-  // Générer les jours du calendrier
   const generateCalendarDays = () => {
     const days: { day: number; isCurrentMonth: boolean; date: Date }[] = [];
     const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const daysInPrevMonth = getDaysInMonth(currentYear, currentMonth - 1);
 
-    // Jours du mois précédent
     for (let i = firstDay - 1; i >= 0; i--) {
       const day = daysInPrevMonth - i;
-      days.push({
-        day,
-        isCurrentMonth: false,
-        date: new Date(currentYear, currentMonth - 1, day),
-      });
+      days.push({ day, isCurrentMonth: false, date: new Date(currentYear, currentMonth - 1, day) });
     }
-
-    // Jours du mois actuel
     for (let i = 1; i <= daysInMonth; i++) {
-      days.push({
-        day: i,
-        isCurrentMonth: true,
-        date: new Date(currentYear, currentMonth, i),
-      });
+      days.push({ day: i, isCurrentMonth: true, date: new Date(currentYear, currentMonth, i) });
     }
-
-    // Jours du mois suivant (pour compléter la grille)
-    const remainingDays = 42 - days.length; // 6 semaines * 7 jours
+    const remainingDays = 42 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        day: i,
-        isCurrentMonth: false,
-        date: new Date(currentYear, currentMonth + 1, i),
-      });
+      days.push({ day: i, isCurrentMonth: false, date: new Date(currentYear, currentMonth + 1, i) });
     }
-
     return days;
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-  };
+  const goToPreviousMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+  const goToNextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
 
   const handleDayPress = (date: Date) => {
     onSelectDate?.(date);
+    onClose();
+  };
+
+  const handleWeekend = () => {
+    const { start, end } = getWeekendDates();
+    onSelectQuickFilter?.("weekend", "Ce week-end", start, end);
+    onClose();
+  };
+
+  const handleMonth = () => {
+    const { start, end } = getMonthDates();
+    onSelectQuickFilter?.("month", "Ce mois-ci", start, end);
+    onClose();
   };
 
   const isSelectedDate = (date: Date) => {
-    if (!selectedDate) return false;
+    if (!selectedDate || activeQuickFilter) return false;
     return (
       date.getDate() === selectedDate.getDate() &&
       date.getMonth() === selectedDate.getMonth() &&
       date.getFullYear() === selectedDate.getFullYear()
     );
   };
+
+  const isInWeekend = (date: Date) => {
+    if (activeQuickFilter !== "weekend") return false;
+    const { start, end } = getWeekendDates();
+    const d = date.getTime();
+    return d >= start.getTime() && d <= end.getTime();
+  };
+
+  const isInMonth = (date: Date) => {
+    if (activeQuickFilter !== "month") return false;
+    const today = new Date();
+    return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  };
+
+  const isHighlighted = (date: Date) => isInWeekend(date) || isInMonth(date);
 
   const isToday = (date: Date) => {
     const today = new Date();
@@ -131,52 +144,26 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   const calendarDays = generateCalendarDays();
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.container} onPress={() => {}}>
-          {/* Handle bar */}
           <View style={styles.handleBar} />
 
           {/* Quick filters */}
           <View style={styles.quickFilters}>
             <Pressable
-              style={[
-                styles.filterButton,
-                quickFilter === "weekend" && styles.filterButtonActive,
-              ]}
-              onPress={() =>
-                setQuickFilter(quickFilter === "weekend" ? null : "weekend")
-              }
+              style={[styles.filterButton, activeQuickFilter === "weekend" && styles.filterButtonActive]}
+              onPress={handleWeekend}
             >
-              <Text
-                style={[
-                  styles.filterText,
-                  quickFilter === "weekend" && styles.filterTextActive,
-                ]}
-              >
+              <Text style={[styles.filterText, activeQuickFilter === "weekend" && styles.filterTextActive]}>
                 Ce week-end
               </Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.filterButton,
-                quickFilter === "month" && styles.filterButtonActive,
-              ]}
-              onPress={() =>
-                setQuickFilter(quickFilter === "month" ? null : "month")
-              }
+              style={[styles.filterButton, activeQuickFilter === "month" && styles.filterButtonActive]}
+              onPress={handleMonth}
             >
-              <Text
-                style={[
-                  styles.filterText,
-                  quickFilter === "month" && styles.filterTextActive,
-                ]}
-              >
+              <Text style={[styles.filterText, activeQuickFilter === "month" && styles.filterTextActive]}>
                 Ce mois-ci
               </Text>
             </Pressable>
@@ -211,14 +198,13 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                 <Pressable
                   key={index}
                   style={styles.dayCell}
-                  onPress={() =>
-                    item.isCurrentMonth && handleDayPress(item.date)
-                  }
+                  onPress={() => item.isCurrentMonth && handleDayPress(item.date)}
                 >
                   <View
                     style={[
                       styles.dayContent,
                       isSelectedDate(item.date) && styles.selectedDay,
+                      isHighlighted(item.date) && styles.highlightedDay,
                     ]}
                   >
                     <Text
@@ -226,7 +212,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
                         styles.dayText,
                         !item.isCurrentMonth && styles.dayTextOutside,
                         isSelectedDate(item.date) && styles.selectedDayText,
-                        isToday(item.date) && styles.todayText,
+                        isHighlighted(item.date) && styles.highlightedDayText,
+                        isToday(item.date) && !isHighlighted(item.date) && styles.todayText,
                       ]}
                     >
                       {item.day}
@@ -359,6 +346,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#A9A9A9",
   },
+  highlightedDay: {
+    backgroundColor: "#FC5F67",
+  },
   dayText: {
     fontFamily: Fonts.bold,
     fontSize: 16,
@@ -370,6 +360,9 @@ const styles = StyleSheet.create({
   },
   selectedDayText: {
     color: "#000000",
+  },
+  highlightedDayText: {
+    color: "#FFFFFF",
   },
   todayText: {
     color: "#FC5F67",

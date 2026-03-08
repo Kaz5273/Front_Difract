@@ -96,9 +96,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         error: null,
       });
 
-      console.log('✅ Login successful:', fullUser.email, '| media:', fullUser.media?.length ?? 0);
+      console.log('✅ Login successful:', fullUser.email);
+      console.log('👤 user.id:', fullUser.id, '| role:', fullUser.role);
+      console.log('📍 user.city:', fullUser.city ?? 'null/undefined');
+      console.log('📷 media count:', fullUser.media?.length ?? 0);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur de connexion';
+      const status = error.response?.status;
+      const errorMessage = status === 429
+        ? 'Trop de tentatives. Réessaie dans quelques minutes.'
+        : error.response?.data?.message || 'Erreur de connexion';
 
       set({
         error: errorMessage,
@@ -241,35 +247,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   // LOGOUT
   // ============================================
   logout: async () => {
+    console.log('🚪 Logging out...');
+
+    // 1. Couper isAuthenticated immédiatement → stoppe tous les useEffect guardés
+    set({ user: null, token: null, isAuthenticated: false, isLoading: false, error: null });
+
+    // 2. Appeler l'API logout (le token est encore en storage pour l'intercepteur)
     try {
-      console.log('🚪 Logging out...');
-      set({ isLoading: true });
-
       await authService.logout();
-      await storage.clearAll();
-
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-      });
-
-      console.log('✅ Logout successful');
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-
-      await storage.clearAll();
-
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-      });
+    } catch {
+      // Ignorer les erreurs réseau, la déconnexion locale est déjà faite
     }
+
+    // 3. Vider le storage après l'appel API
+    await storage.clearAll();
+
+    console.log('✅ Logout successful');
   },
 
   // ============================================

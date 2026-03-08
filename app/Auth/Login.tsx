@@ -1,6 +1,8 @@
 import IconGoogle from "@/components/icons/iconGoogle";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { subscriptionService } from "@/services/subscription/subscription.service";
+import { useAuthStore } from "@/store/auth-store";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -30,8 +32,20 @@ export default function LoginScreen() {
 
     try {
       await login(email.trim(), password);
+
+      // Lire le user directement depuis le store Zustand (synchrone, à jour après login)
+      const { user } = useAuthStore.getState();
+
+      if (user?.role === "ARTIST") {
+        const status = await subscriptionService.getStatus();
+        if (!status.subscribed) {
+          router.replace("/Auth/artist-subscribe");
+          return;
+        }
+      }
+
       router.replace("/(tabs)");
-    } catch (error) {
+    } catch {
       Alert.alert("Erreur", "Email ou mot de passe incorrect");
     }
   };

@@ -64,7 +64,7 @@ export const storage = {
   // Nettoyer toutes les données
   clearAll: async (): Promise<void> => {
     try {
-      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, '@difract_location', '@difract_location_enabled']);
     } catch (error) {
       console.error('Error clearing storage:', error);
       throw error;

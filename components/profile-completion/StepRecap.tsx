@@ -112,7 +112,7 @@ export function StepRecap({
             <View key={index} style={styles.trackRow}>
               {/* Edit button */}
               <Pressable onPress={onEditTracks} style={styles.trackEditButton}>
-                <Pencil size={20} color="rgba(255,255,255,0.7)" />
+                <Pencil size={20} color="#161616" />
               </Pressable>
 
               {/* Track bar */}
@@ -138,7 +138,7 @@ export function StepRecap({
               {filledLinks.length} réseaux ajoutés
             </Text>
             <Pressable onPress={onEditSocialLinks}>
-              <Pencil size={20} color="rgba(255,255,255,0.7)" />
+              <Pencil size={20} color="#161616" />
             </Pressable>
           </View>
         </View>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 25,
-    backgroundColor: "#787878",
+    backgroundColor: "#F9F871",
     justifyContent: "center",
     alignItems: "center",
   },

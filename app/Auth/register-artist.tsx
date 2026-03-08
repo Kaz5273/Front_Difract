@@ -1,4 +1,6 @@
 import { Fonts } from "@/constants/theme";
+import { locationService } from "@/services/location/location.service";
+import { MapPin } from "lucide-react-native";
 import { StepArtistName } from "@/components/register-artist/StepArtistName";
 import { CompletionScreen } from "@/components/CompletionScreen";
 import { StepDescription } from "@/components/register-artist/StepDescription";
@@ -48,6 +50,7 @@ interface ArtistRegistrationData {
   trackName: string;
   musicFile: DocumentPickerAsset | null;
   subscriptionPlan: "pro" | "standard";
+  city: string;
 }
 
 export default function RegisterArtistScreen() {
@@ -64,7 +67,9 @@ export default function RegisterArtistScreen() {
     trackName: "",
     musicFile: null,
     subscriptionPlan: "pro",
+    city: "",
   });
+  const [isRequestingGPS, setIsRequestingGPS] = useState(false);
   const [musicStyles, setMusicStyles] = useState<MusicStyle[]>([]);
   const [stylesLoading, setStylesLoading] = useState(true);
   const [stylesError, setStylesError] = useState<string | null>(null);
@@ -124,6 +129,26 @@ export default function RegisterArtistScreen() {
   };
 
   const isCodeComplete = code.every((digit) => digit !== "");
+
+  const handleUseGPS = async () => {
+    setIsRequestingGPS(true);
+    try {
+      const granted = await locationService.requestPermission();
+      if (!granted) {
+        Alert.alert(
+          "Localisation refusée",
+          "Activez la localisation dans vos réglages ou saisissez votre ville manuellement."
+        );
+        return;
+      }
+      const coords = await locationService.getCurrentPosition();
+      if (!coords) return;
+      const detectedCity = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      if (detectedCity) setData((prev) => ({ ...prev, city: detectedCity }));
+    } finally {
+      setIsRequestingGPS(false);
+    }
+  };
 
   const handleSecondaryStyleToggle = (id: number) => {
     const current = data.secondaryStyleIds;
@@ -187,6 +212,9 @@ export default function RegisterArtistScreen() {
           type: data.musicFile.mimeType || "audio/mpeg",
           name: data.musicFile.name || "track.mp3",
         } as any);
+        if (data.trackName.trim()) {
+          formData.append("titles[]", data.trackName.trim());
+        }
         const res = await userService.uploadTracks(formData);
         const tracks = Array.isArray(res.media) ? res.media : [res.media];
         newMedia.push(...tracks);
@@ -325,6 +353,12 @@ export default function RegisterArtistScreen() {
           // Token disponible → upload des médias (photo de profil + track)
           await handleMediaUploads();
 
+          // Mise à jour localisation (silencieuse, non-bloquante)
+          locationService.updateLocationInBackground().catch(() => {});
+          if (data.city.trim()) {
+            locationService.updateBackend({ city: data.city.trim() }).catch(() => {});
+          }
+
           setCurrentStep(8); // Aller à l'abonnement
         } catch {
           // Erreur gérée par le store
@@ -374,7 +408,7 @@ export default function RegisterArtistScreen() {
 
   const isLastStep = currentStep === 9;
   const showHeader = !isLastStep;
-  const showFooter = !isLastStep;
+  const showFooter = !isLastStep && currentStep !== 8;
   const buttonLoading = isLoading || isSubmitting;
 
   const getButtonLabel = () => {
@@ -401,6 +435,21 @@ export default function RegisterArtistScreen() {
     setShowProfileModal(false);
     router.replace("/(tabs)");
   };
+
+  // Écran abonnement plein écran
+  if (currentStep === 8) {
+    return (
+      <StepSubscription
+        selectedPlan={data.subscriptionPlan}
+        onSelectPlan={(plan) =>
+          setData((prev) => ({ ...prev, subscriptionPlan: plan }))
+        }
+        onValidate={handleContinue}
+        onCancel={() => router.replace("/(tabs)")}
+        isLoading={buttonLoading}
+      />
+    );
+  }
 
   // Écran de complétion plein écran
   if (currentStep === 9) {
@@ -454,12 +503,37 @@ export default function RegisterArtistScreen() {
           {/* Content */}
           <View style={styles.content}>
             {currentStep === 0 && (
-              <StepArtistName
-                artistName={data.artistName}
-                onUpdate={(v) =>
-                  setData((prev) => ({ ...prev, artistName: v }))
-                }
-              />
+              <>
+                <StepArtistName
+                  artistName={data.artistName}
+                  onUpdate={(v) =>
+                    setData((prev) => ({ ...prev, artistName: v }))
+                  }
+                />
+                <View style={styles.citySection}>
+                  <Text style={styles.cityLabel}>Votre ville</Text>
+                  <TextInput
+                    style={styles.cityInput}
+                    placeholder="Ville (ex: Paris)"
+                    placeholderTextColor="#b6b6b6"
+                    value={data.city}
+                    onChangeText={(v) => setData((prev) => ({ ...prev, city: v }))}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    editable={!isRequestingGPS}
+                  />
+                  <Pressable style={styles.gpsButton} onPress={handleUseGPS} disabled={isRequestingGPS}>
+                    {isRequestingGPS ? (
+                      <ActivityIndicator size="small" color="#FC5F67" />
+                    ) : (
+                      <MapPin size={14} color="#FC5F67" />
+                    )}
+                    <Text style={styles.gpsButtonText}>
+                      {isRequestingGPS ? "Détection..." : "Utiliser ma position"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
             )}
 
             {currentStep === 1 && (
@@ -567,15 +641,6 @@ export default function RegisterArtistScreen() {
                   <Text style={styles.resendCodeText}>Renvoyer le code</Text>
                 </Pressable>
               </View>
-            )}
-
-            {currentStep === 8 && (
-              <StepSubscription
-                selectedPlan={data.subscriptionPlan}
-                onSelectPlan={(plan) =>
-                  setData((prev) => ({ ...prev, subscriptionPlan: plan }))
-                }
-              />
             )}
 
             {/* Error message */}
@@ -776,5 +841,43 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: "#9d9d9d",
+  },
+  citySection: {
+    alignItems: "center",
+    gap: 10,
+    marginTop: 24,
+    width: "100%",
+    paddingHorizontal: 8,
+  },
+  cityLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.extraBold,
+    color: "#FFFFFF",
+    textAlign: "center",
+    letterSpacing: -0.34,
+  },
+  cityInput: {
+    width: "100%",
+    maxWidth: 343,
+    height: 48,
+    backgroundColor: "#101010",
+    borderWidth: 1,
+    borderColor: "#a6a6a6",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: "#FFFFFF",
+  },
+  gpsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  gpsButtonText: {
+    fontSize: 12,
+    fontFamily: Fonts.bold,
+    color: "#FC5F67",
   },
 });

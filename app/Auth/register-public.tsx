@@ -3,8 +3,10 @@ import IconGoogle from "@/components/icons/iconGoogle";
 import { StepProfilePhoto } from "@/components/register-artist/StepProfilePhoto";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { locationService } from "@/services/location/location.service";
 import { userService } from "@/services/user/user.service";
 import { Ionicons } from "@expo/vector-icons";
+import { MapPin } from "lucide-react-native";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
@@ -27,6 +29,8 @@ const TOTAL_STEPS = 4;
 export default function RegisterPublicScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [pseudo, setPseudo] = useState("");
+  const [city, setCity] = useState("");
+  const [isRequestingGPS, setIsRequestingGPS] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<ImagePickerAsset | null>(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState(["", "", "", "", ""]);
@@ -81,6 +85,26 @@ export default function RegisterPublicScreen() {
   };
 
   const isCodeComplete = code.every((digit) => digit !== "");
+
+  const handleUseGPS = async () => {
+    setIsRequestingGPS(true);
+    try {
+      const granted = await locationService.requestPermission();
+      if (!granted) {
+        Alert.alert(
+          "Localisation refusée",
+          "Activez la localisation dans vos réglages ou saisissez votre ville manuellement."
+        );
+        return;
+      }
+      const coords = await locationService.getCurrentPosition();
+      if (!coords) return;
+      const detectedCity = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      if (detectedCity) setCity(detectedCity);
+    } finally {
+      setIsRequestingGPS(false);
+    }
+  };
 
   const handleContinue = async () => {
     clearError();
@@ -140,6 +164,12 @@ export default function RegisterPublicScreen() {
       try {
         const fullCode = code.join("");
         await verifyEmail(email.trim(), fullCode);
+
+        // Mise à jour localisation (silencieuse, non-bloquante)
+        locationService.updateLocationInBackground().catch(() => {});
+        if (city.trim()) {
+          locationService.updateBackend({ city: city.trim() }).catch(() => {});
+        }
 
         // Upload photo de profil après vérification (token disponible)
         if (profilePhoto) {
@@ -214,7 +244,7 @@ export default function RegisterPublicScreen() {
 
         {/* Content */}
         <View style={styles.content}>
-          {/* Étape 0 : Pseudo */}
+          {/* Étape 0 : Pseudo + Ville */}
           {currentStep === 0 && (
             <View style={styles.formSection}>
               <View style={styles.fieldGroup}>
@@ -238,6 +268,34 @@ export default function RegisterPublicScreen() {
                     règles de la communauté
                   </Text>
                 </Text>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldTitle}>Votre ville</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ville (ex: Paris)"
+                  placeholderTextColor="#b6b6b6"
+                  value={city}
+                  onChangeText={setCity}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isLoading && !isRequestingGPS}
+                />
+                <Pressable
+                  style={styles.gpsButton}
+                  onPress={handleUseGPS}
+                  disabled={isRequestingGPS}
+                >
+                  {isRequestingGPS ? (
+                    <ActivityIndicator size="small" color="#FC5F67" />
+                  ) : (
+                    <MapPin size={14} color="#FC5F67" />
+                  )}
+                  <Text style={styles.gpsButtonText}>
+                    {isRequestingGPS ? "Détection..." : "Utiliser ma position"}
+                  </Text>
+                </Pressable>
               </View>
             </View>
           )}
@@ -614,5 +672,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.bold,
     color: "rgba(255, 255, 255, 0.7)",
+  },
+  gpsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+  },
+  gpsButtonText: {
+    fontSize: 12,
+    fontFamily: Fonts.bold,
+    color: "#FC5F67",
   },
 });

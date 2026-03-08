@@ -1,12 +1,35 @@
 import { apiClient } from '../api/client';
-import { User, Artist } from '../api/types';
+import { Artist, Media, SocialLink } from '../api/types';
+import { ENDPOINTS } from '../api/endpoints';
+
+export interface ArtistDetail {
+  id: number;
+  name: string;
+  bio: string | null;
+  city: string | null;
+  votes_count: number;
+  distance_km?: number;
+  styles: Array<{ id: number; name: string; pivot: { is_primary: boolean } }>;
+  media?: Media[];
+  social_links?: SocialLink[];
+}
 
 export const artistsService = {
   /**
-   * Récupérer tous les artistes (users avec role ARTIST)
+   * Récupérer tous les artistes
    */
   getAll: async (): Promise<Artist[]> => {
-    const response = await apiClient.get<Artist[]>('/api/artists');
+    const response = await apiClient.get<Artist[]>(ENDPOINTS.ARTISTS);
+    return response.data;
+  },
+
+  /**
+   * Récupérer les artistes les plus votés
+   */
+  getTop: async (limit: number = 10): Promise<Artist[]> => {
+    const response = await apiClient.get<Artist[]>(ENDPOINTS.ARTISTS_TOP, {
+      params: { limit },
+    });
     return response.data;
   },
 
@@ -14,42 +37,26 @@ export const artistsService = {
    * Récupérer un artiste par son ID
    */
   getById: async (id: number): Promise<Artist> => {
-    const response = await apiClient.get<Artist>(`/api/artists/${id}`);
+    const response = await apiClient.get<Artist>(ENDPOINTS.ARTIST_BY_ID(id));
     return response.data;
   },
 
   /**
-   * Récupérer les artistes les plus votés
+   * Récupérer les détails complets d'un artiste (public, avec styles/media/social_links)
    */
-  getTopArtists: async (limit: number = 10): Promise<Artist[]> => {
-    const response = await apiClient.get<Artist[]>('/api/artists/top', {
-      params: { limit },
+  getDetail: async (id: number, lat?: number, lng?: number): Promise<ArtistDetail> => {
+    const response = await apiClient.get<ArtistDetail>(ENDPOINTS.ARTIST_DETAIL(id), {
+      params: lat && lng ? { lat, lng } : undefined,
     });
     return response.data;
   },
 
   /**
-   * Voter pour un artiste
+   * Récupérer les événements d'un artiste
    */
-  vote: async (artistId: number): Promise<void> => {
-    await apiClient.post(`/api/artists/${artistId}/vote`);
-  },
-
-  /**
-   * Retirer son vote d'un artiste
-   */
-  unvote: async (artistId: number): Promise<void> => {
-    await apiClient.delete(`/api/artists/${artistId}/vote`);
-  },
-
-  /**
-   * Vérifier si l'utilisateur a voté pour cet artiste
-   */
-  hasVoted: async (artistId: number): Promise<boolean> => {
-    const response = await apiClient.get<{ has_voted: boolean }>(
-      `/api/artists/${artistId}/has-voted`
-    );
-    return response.data.has_voted;
+  getEvents: async (id: number) => {
+    const response = await apiClient.get(ENDPOINTS.ARTIST_EVENTS(id));
+    return response.data;
   },
 };
 

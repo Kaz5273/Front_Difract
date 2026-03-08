@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { StyleSheet, Pressable, View } from "react-native";
-import { router } from "expo-router";
+import React, { useEffect } from "react";
+import { StyleSheet, Pressable, View, ActivityIndicator, Text } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { BlurView } from "expo-blur";
-import { ChevronLeft, Link } from "lucide-react-native";
+import { ChevronLeft } from "lucide-react-native";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -11,68 +11,92 @@ import { ArtistAbout } from "@/components/Artist/ArtistAbout";
 import { MusicPlayer } from "@/components/Artist/MusicPlayer";
 import { VideoClip } from "@/components/Artist/VideoClip";
 import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
-import { Fonts, Typography } from "@/constants/theme";
+import { StyleBadges } from "@/components/Badges/StyleBadges";
+import { Fonts } from "@/constants/theme";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
-
-// Données d'exemple - à remplacer par les vraies données
-
-const exampleArtists = [
-  {
-    id: "1",
-    name: "Choi",
-    subtitle: "Here to know",
-    location: "Annecy",
-    bio: "Joe Biden, 46 ans, est un véritable alchimiste du son. Entre ses doigts, un saxophone ténor prend vie ; ses improvisations, nourries de deux décennies d'amour inconditionnel pour le jazz, convoquent aussi bien les bruissements feutrés des clubs new-yorkais que l'énergie éclatante de la scène parisienne.\n\nAutodidacte devenu chef d'orchestre, il mêle les harmonies be-bop aux textures électroniques qu'il sculpte en studio, créant des paysages sonores aussi audacieux qu'intimes.",
-    imageUrl: [
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&h=600&fit=crop",
-    ],
-    styles: ["RockNRoll", "Indie", "Pop", "Rock"],
-    distance: "150km",
-    pastShows: 7,
-    yearsActive: 14,
-    instruments: "Chanteur, saxophoniste",
-    playsWithOthers: true,
-    tracks: [
-      { id: "1", title: "Jazz Improvisation", duration: "3:45" },
-      { id: "2", title: "Midnight Blues", duration: "4:20" },
-      { id: "3", title: "Sunset Melody", duration: "3:12" },
-      { id: "4", title: "Urban Groove", duration: "5:01" },
-    ],
-    videoClip: {
-      // Exemple YouTube (commenté)
-      // url: "https://www.youtube.com/watch?v=iywaBOMvYLI&list=RDiywaBOMvYLI&start_radio=1",
-      // type: "youtube",
-
-      // Exemple vidéo locale - utilisez require() pour les fichiers dans assets
-      // url: require("@/assets/videos/RickRoll.mp4"),
-
-      // Ou utilisez une URL distante pour tester
-      // option permettant de tester avec un lien youtube directement
-    /*   videoClip: {
-      url: "https://www.youtube.com/watch?v=Aq5WXmQQooo&list=RDAq5WXmQQooo&start_radio=1",
-      type: "youtube" as "youtube" | "local",
-      thumbnail: "https://img.youtube.com/vi/Aq5WXmQQooo/maxresdefault.jpg", */
-      url: "https://www.youtube.com/watch?v=Aq5WXmQQooo&list=RDAq5WXmQQooo&start_radio=1",
-      type: "youtube" as "youtube" | "local",
-      thumbnail: "https://img.youtube.com/vi/Aq5WXmQQooo/maxresdefault.jpg",
-      /* url: require("@/assets/images/RickRoll.mp4"),
-      type: "local" as "youtube" | "local",
-      thumbnail:
-        "https://platform.theverge.com/wp-content/uploads/sites/2/chorus/uploads/chorus_asset/file/22312759/rickroll_4k.jpg?quality=90&strip=all&crop=0,10.749448450723,100,78.501103098554", */
-    },
-  },
-];
+import { useArtistDetail } from "@/hooks/use-artists";
+import { useAuthStore } from "@/store/auth-store";
+import { apiClient, getMediaUrl } from "@/services/api/client";
+import { ENDPOINTS } from "@/services/api/endpoints";
+import { Artist } from "@/services/api/types";
 
 export default function ArtistDetailScreen() {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const artistId = Number(id);
+  const { artist, isLoading, error, fetchDetail } = useArtistDetail(artistId);
+  const [isFavorite, setIsFavorite] = React.useState(false);
   const { showModal, setShowModal, guard } = useGuestGuard();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // Récupérer le premier artiste du tableau (ou utiliser l'id de la route pour filtrer)
-  const artist = exampleArtists[0];
+  useEffect(() => {
+    if (!artistId) return;
+    fetchDetail();
+  }, [artistId]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !artistId) return;
+    apiClient.get<Artist[]>(ENDPOINTS.MY_FAVORITE_ARTISTS)
+      .then((res) => setIsFavorite(res.data.some((a) => a.id === artistId)))
+      .catch(() => {});
+  }, [isAuthenticated, artistId]);
+
+  const handleFavoriteToggle = async () => {
+    if (isFavorite) {
+      setIsFavorite(false);
+      try {
+        await apiClient.delete(ENDPOINTS.FAVORITE_ARTIST(artistId));
+      } catch {
+        setIsFavorite(true);
+      }
+    } else {
+      setIsFavorite(true);
+      try {
+        await apiClient.post(ENDPOINTS.FAVORITE_ARTIST(artistId));
+      } catch {
+        setIsFavorite(false);
+      }
+    }
+  };
+
+  const profileMedia = artist?.media?.find((m) => m.role === 'PROFILE' && m.is_primary);
+  const artistImageUrl = profileMedia ? getMediaUrl(profileMedia) || '' : '';
+
+  const galleryImages = artist?.media
+    ?.filter((m) => m.role === 'GALLERY' || m.role === 'PROFILE')
+    .map((m) => getMediaUrl(m) || '')
+    .filter(Boolean) ?? [];
+
+  const tracks = artist?.media
+    ?.filter((m) => m.role === 'TRACK')
+    .map((m, i) => ({
+      id: String(m.id),
+      title: m.title || `Track ${i + 1}`,
+      duration: '',
+      url: getMediaUrl(m) || undefined,
+    })) ?? [];
+
+  const introVideo = artist?.media?.find((m) => m.role === 'INTRO_VIDEO');
+  const introVideoUrl = introVideo ? getMediaUrl(introVideo) : undefined;
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#FC5F67" />
+      </View>
+    );
+  }
+
+  if (error || !artist) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error || 'Artiste introuvable'}</Text>
+        <Pressable onPress={() => router.back()} style={styles.backButtonFallback}>
+          <Text style={styles.backButtonText}>Retour</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -88,54 +112,76 @@ export default function ArtistDetailScreen() {
         showsVerticalScrollIndicator={false}
         headerImage={
           <ImageCarousel
-            images={artist.imageUrl}
+            images={galleryImages}
             isFavorite={isFavorite}
-            onFavoritePress={() => guard(() => setIsFavorite(!isFavorite))}
+            onFavoritePress={() => guard(handleFavoriteToggle)}
           />
         }
       >
         <ThemedView style={styles.contentContainer}>
           <ThemedView style={styles.titleContainer}>
             <ThemedText style={styles.styleTitle}>{artist.name}</ThemedText>
-            
           </ThemedView>
 
-          {artist.tracks && artist.tracks.length > 0 && (
+          {artist.styles && artist.styles.length > 0 && (
+            <StyleBadges styles={artist.styles.map((s) => s.name)} maxVisible={5} />
+          )}
+
+          {tracks.length > 0 && (
             <MusicPlayer
-              tracks={artist.tracks}
+              tracks={tracks}
               artistName={artist.name}
-              artistImage={artist.imageUrl[0]}
+              artistImage={artistImageUrl || galleryImages[0] || ''}
               onBeforePlay={guard}
             />
           )}
 
-          <ArtistAbout
-            description={artist.bio}
-            location={artist.location}
-            distance={artist.distance}
-            pastShows={artist.pastShows}
-            yearsActive={artist.yearsActive}
-            instruments={artist.instruments}
-            playsWithOthers={artist.playsWithOthers}
-          />
-          <VideoClip
-            videoUrl={artist.videoClip?.url}
-            thumbnailUrl={artist.videoClip?.thumbnail || ""}
-            videoType={artist.videoClip?.type}
-            onBeforePlay={guard}
-          />
+          {artist.bio ? (
+            <ArtistAbout description={artist.bio} />
+          ) : null}
+
+          {introVideoUrl && (
+            <VideoClip
+              videoUrl={introVideoUrl}
+              thumbnailUrl=""
+              videoType="local"
+              onBeforePlay={guard}
+            />
+          )}
         </ThemedView>
       </ParallaxScrollView>
 
-      {/* Lecteur audio global en bas de page */}
       <GlobalAudioPlayer forceShow={true} bottomPosition={25} />
-
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  centerContainer: {
+    flex: 1,
+    backgroundColor: "#111111",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  errorText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: "#7B7B7B",
+    textAlign: "center",
+  },
+  backButtonFallback: {
+    backgroundColor: "#FC5F67",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  backButtonText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 14,
+    color: "#000000",
+  },
   backButton: {
     position: "absolute",
     top: 60,
@@ -153,14 +199,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingRight: 2,
-  },
-  linkButton: {
-    padding: 4,
-  },
-  headerImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
   },
   contentContainer: {
     gap: 16,

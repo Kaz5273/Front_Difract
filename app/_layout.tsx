@@ -16,7 +16,6 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { Fonts } from "@/constants/theme";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
-import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 
 // Empêcher le splash screen de se cacher automatiquement
 SplashScreen.preventAutoHideAsync();
@@ -99,9 +98,9 @@ export default function RootLayout() {
             <Stack.Screen name="Auth/register" options={{ gestureEnabled: false }} />
             <Stack.Screen name="Auth/register-public" options={{ gestureEnabled: false }} />
             <Stack.Screen name="Auth/register-artist" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="Auth/artist-subscribe" options={{ gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
           </Stack>
-          <GlobalAudioPlayer />
           <StatusBar style="auto" />
         </ThemeProvider>
       </AudioPlayerProvider>

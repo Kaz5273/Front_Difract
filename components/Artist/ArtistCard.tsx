@@ -22,6 +22,8 @@ interface ArtistCardProps {
   styles: string[];
   trackId?: string;
   isFavorite?: boolean;
+  showPlayButton?: boolean;
+  width?: number;
   onPress?: () => void;
   onFavoritePress?: () => void;
   onPlayPress?: () => void;
@@ -35,6 +37,8 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   styles: musicStyles,
   trackId,
   isFavorite = false,
+  showPlayButton = true,
+  width = 180,
   onPress,
   onFavoritePress,
   onPlayPress,
@@ -45,9 +49,9 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
 
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { width }]}>
       {/* Image Card */}
-      <Pressable onPress={onPress} style={styles.imageCard}>
+      <Pressable onPress={onPress} style={[styles.imageCard, { width, height: width }]}>
         <ImageBackground
           source={{ uri: imageUrl }}
           style={styles.imageBackground}
@@ -65,7 +69,11 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
 
               <Pressable onPress={onFavoritePress}>
                 <BlurView intensity={15} tint="dark" style={styles.favoriteButton}>
-                  <Sparkle size={20} color="#FFFFFF" />
+                  <Sparkle
+                    size={20}
+                    color={isFavorite ? "#FFFFFF" : "#FFFFFF"}
+                    fill={isFavorite ? "#FFFFFF" : "transparent"}
+                  />
                 </BlurView>
               </Pressable>
             </View>
@@ -88,17 +96,19 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           </Text>
         </View>
 
-        <Pressable onPress={onPlayPress} style={styles.playButtonContainer}>
-          <BlurView intensity={2} style={styles.playButton}>
-            {isArtistPlaying ? (
-              <Pause size={10} color="#FFFFFF" fill="#FFFFFF" />
-            ) : (
-              <View style={styles.playIconWrapper}>
-                <IconPlay color="#FFFFFF" />
-              </View>
-            )}
-          </BlurView>
-        </Pressable>
+        {showPlayButton && (
+          <Pressable onPress={onPlayPress} style={styles.playButtonContainer}>
+            <BlurView intensity={2} style={styles.playButton}>
+              {isArtistPlaying ? (
+                <Pause size={10} color="#FFFFFF" fill="#FFFFFF" />
+              ) : (
+                <View style={styles.playIconWrapper}>
+                  <IconPlay color="#FFFFFF" />
+                </View>
+              )}
+            </BlurView>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -114,6 +124,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 20,
     overflow: "hidden",
+    backgroundColor: "#2A2A2A",
   },
   imageBackground: {
     width: "100%",

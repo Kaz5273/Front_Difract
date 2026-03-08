@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Star } from "lucide-react-native";
+import { Sparkle, Star } from "lucide-react-native";
 import { Fonts, Typography } from "@/constants/theme";
 
 type BadgeType = "date" | "votes";
@@ -92,7 +92,7 @@ export const FavoriteArtistCard: React.FC<FavoriteArtistCardProps> = ({
             {/* Bouton Favoris */}
             <Pressable onPress={onFavoritePress} style={styles.favoriteButton}>
               <BlurView intensity={2} style={styles.favoriteBlur}>
-                <Star
+                <Sparkle
                   size={20}
                   color="#FFFFFF"
                   fill={isFavorite ? "#FFFFFF" : "transparent"}

@@ -16,8 +16,14 @@ export const ENDPOINTS = {
 
   // Events
   EVENTS: '/api/events',
+  EVENTS_UPCOMING: '/api/events/upcoming',
   EVENT_BY_ID: (id: string | number) => `/api/events/${id}`,
   EVENT_ARTISTS: (eventId: string | number) => `/api/events/${eventId}/artists`,
+  EVENT_FRIENDS_GOING: (eventId: string | number) => `/api/events/${eventId}/friends-going`,
+  EVENT_TICKET_PRICE: (eventId: string | number) => `/api/events/${eventId}/ticket-price`,
+  EVENT_TICKET_CHECKOUT: (eventId: string | number) => `/api/events/${eventId}/tickets/checkout`,
+  EVENT_COMMENTS: (eventId: string | number) => `/api/events/${eventId}/comments`,
+  EVENT_COMMENT: (eventId: string | number, commentId: string | number) => `/api/events/${eventId}/comments/${commentId}`,
 
   // Votes
   VOTES: '/api/votes',
@@ -25,6 +31,10 @@ export const ENDPOINTS = {
   MY_VOTES: '/api/me/votes',
 
   // Artists
+  ARTISTS: '/api/artists',
+  ARTISTS_TOP: '/api/artists/top',
+  ARTIST_BY_ID: (id: string | number) => `/api/artists/${id}`,
+  ARTIST_DETAIL: (id: string | number) => `/api/artists/${id}/detail`,
   ARTISTS_REGISTER: '/api/artists/register',
   ARTISTS_UNREGISTER: '/api/artists/unregister',
   ARTIST_EVENTS: (userId: string | number) => `/api/artists/${userId}/events`,
@@ -53,6 +63,9 @@ export const ENDPOINTS = {
   MY_FRIENDS: '/api/me/friends',
   MY_FRIENDS_COUNT: '/api/me/friends/count',
   FRIEND: (userId: string | number) => `/api/me/friends/${userId}`,
+
+  // Location
+  ME_LOCATION: '/api/me/location',
 
   // Subscription
   SUBSCRIPTION_CHECKOUT: '/api/subscription/checkout',

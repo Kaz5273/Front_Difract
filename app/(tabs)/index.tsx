@@ -1,213 +1,159 @@
 import { Header } from "@/components/Header/header";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Link, router } from "expo-router";
+import { router } from "expo-router";
 import {
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Alert,
   View,
+  ActivityIndicator,
+  Text,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/use-auth";
+import { locationService } from "@/services/location/location.service";
 import { Fonts } from "@/constants/theme";
 import { ArtistCard } from "@/components/Artist/ArtistCard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EventCard } from "@/components/Event/EventCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
+import { LocationSearchModal } from "@/components/Modals/LocationSearchModal";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
+import { useArtists } from "@/hooks/use-artists";
+import { useEvents } from "@/hooks/use-events";
+import { Artist } from "@/services/api/types";
+import { getMediaUrl } from "@/services/api/client";
+import { artistsService } from "@/services/artists/artists.service";
+import { useFavoritesStore } from "@/store/favorites-store";
+
+function formatTimeRange(eventDate: string, endTime?: string | null): string {
+  const start = new Date(eventDate);
+  const startH = start.getHours().toString().padStart(2, "0");
+  const startM = start.getMinutes().toString().padStart(2, "0");
+  if (!endTime) return `${startH}h${startM}`;
+  const end = new Date(endTime);
+  const endH = end.getHours().toString().padStart(2, "0");
+  const endM = end.getMinutes().toString().padStart(2, "0");
+  return `${startH}h${startM} à ${endH}h${endM}`;
+}
 
 export default function HomeScreen() {
-  // 🪝 Récupération de la fonction logout et de l'état
-  const { logout, isLoading, user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
+  const [displayCity, setDisplayCity] = useState<string>("Ma localisation");
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const { showModal, setShowModal, guard } = useGuestGuard();
+  const { artists, isLoading: artistsLoading, fetchArtists } = useArtists();
+  const { events, isLoading: eventsLoading, fetchUpcoming } = useEvents();
 
-  // État pour gérer les favoris
-  const [favorites, setFavorites] = useState<{ [key: string]: boolean }>({});
+  const { load: loadFavorites, add: addFavorite, remove: removeFavorite, isFavorite } = useFavoritesStore();
 
-  // Données d'exemple pour les artistes
-  const exampleArtists = [
-    {
-      id: "1",
-      name: "Choi",
-      subtitle: "Here to know",
-      location: "Annecy",
-      imageUrl:
-        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop",
-      styles: ["RockNRoll", "Indie", "Pop", "Rock"],
-      mainTrack: {
-        id: "track-1",
-        title: "Jazz Improvisation",
-        duration: "3:45",
-      },
-    },
-    {
-      id: "2",
-      name: "Cosi",
-      subtitle: "Soul & Jazz",
-      location: "Lyon",
-      imageUrl:
-        "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
-      styles: ["Jazz", "Soul"],
-      mainTrack: {
-        id: "track-2",
-        title: "Midnight Blues",
-        duration: "4:20",
-      },
-    },
-    {
-      id: "3",
-      name: "Cosi",
-      subtitle: "Soul & Jazz",
-      location: "Lyon",
-      imageUrl:
-        "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop",
-      styles: ["Jazz", "Soul"],
-      mainTrack: {
-        id: "track-3",
-        title: "Sunset Melody",
-        duration: "3:12",
-      },
-    },
-  ];
-
-  // Fonction pour basculer le favori
-  const toggleFavorite = (artistId: string) => {
-    setFavorites((prev) => ({
-      ...prev,
-      [artistId]: !prev[artistId],
-    }));
-  };
-
-  // Fonction pour lancer/mettre en pause la musique principale d'un artiste
-  const handlePlayArtist = (artist: (typeof exampleArtists)[0]) => {
-    if (artist.mainTrack) {
-      // Si la musique de cet artiste est déjà en cours de lecture, mettre en pause
-      if (currentTrack?.id === artist.mainTrack.id && isPlaying) {
-        pause();
-      } else {
-        // Sinon, lancer la musique
-        play({
-          id: artist.mainTrack.id,
-          title: artist.mainTrack.title,
-          artistName: artist.name,
-          artistImage: artist.imageUrl,
-          duration: artist.mainTrack.duration,
-        });
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (user?.city) {
+      setDisplayCity(user.city);
+      return;
+    }
+    (async () => {
+      let coords = await locationService.getCachedLocation();
+      if (!coords) {
+        const active = await locationService.isLocationActive();
+        if (active) {
+          coords = await locationService.getCurrentPosition();
+          if (coords) locationService.updateLocationInBackground();
+        }
       }
+      if (!coords) return;
+      const city = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      if (city) setDisplayCity(city);
+    })();
+  }, [user?.city, isAuthenticated]);
+
+  // Charger les données publiques (artistes + events) pour tous les utilisateurs
+  useEffect(() => {
+    fetchArtists();
+    fetchUpcoming(5);
+  }, []);
+
+  // Charger les favoris uniquement si connecté
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    loadFavorites();
+  }, [isAuthenticated]);
+
+  const toggleFavorite = async (artistId: string) => {
+    if (isFavorite(artistId)) {
+      await removeFavorite(artistId);
+    } else {
+      await addFavorite(artistId);
     }
   };
 
-  // Données d'exemple pour les événements
-  const exampleEvents = [
-    {
-      id: 1,
-      title: "Espace rencontre",
-      location: "Annecy-le-vieux",
-      distance: "150km",
-      eventDate: "2025-06-06T18:00:00.000Z",
-      timeRange: "18h00 à 00h00",
-      price: 22.5,
-      imageUrl:
-        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop",
-      styles: ["Jazz", "Expérimentale"],
-      friendsGoing: 3,
-      friendsAvatars: [
-        "https://i.pravatar.cc/150?img=1",
-        "https://i.pravatar.cc/150?img=2",
-        "https://i.pravatar.cc/150?img=3",
-      ],
-    },
-    {
-      id: 2,
-      title: "Festival Rock en Seine",
-      location: "Paris",
-      distance: "500km",
-      eventDate: "2025-07-15T20:00:00.000Z",
-      timeRange: "20h00 à 02h00",
-      price: 45.0,
-      imageUrl:
-        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop",
-      styles: ["Rock", "Indie"],
-      friendsGoing: 5,
-      friendsAvatars: [
-        "https://i.pravatar.cc/150?img=4",
-        "https://i.pravatar.cc/150?img=5",
-        "https://i.pravatar.cc/150?img=6",
-      ],
-    },
-    {
-      id: 3,
-      title: "Espace rencontre",
-      location: "Annecy-le-vieux",
-      distance: "150km",
-      eventDate: "2025-06-06T18:00:00.000Z",
-      timeRange: "18h00 à 00h00",
-      price: 22.5,
-      imageUrl:
-        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop",
-      styles: ["Jazz", "Expérimentale"],
-      friendsGoing: 3,
-      friendsAvatars: [
-        "https://i.pravatar.cc/150?img=1",
-        "https://i.pravatar.cc/150?img=2",
-        "https://i.pravatar.cc/150?img=3",
-      ],
-    },
-    {
-      id: 4,
-      title: "Festival Rock en Seine",
-      location: "Paris",
-      distance: "500km",
-      eventDate: "2025-07-15T20:00:00.000Z",
-      timeRange: "20h00 à 02h00",
-      price: 45.0,
-      imageUrl:
-        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop",
-      styles: ["Rock", "Indie"],
-      friendsGoing: 5,
-      friendsAvatars: [
-        "https://i.pravatar.cc/150?img=4",
-        "https://i.pravatar.cc/150?img=5",
-        "https://i.pravatar.cc/150?img=6",
-      ],
-    },
-  ];
-
-  // 🚪 Fonction de déconnexion
-  const handleLogout = async () => {
-    Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
-      {
-        text: "Annuler",
-        style: "cancel",
-      },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            console.log("🚪 User clicked logout");
-
-            // Appel de la fonction logout du store
-            await logout();
-
-            console.log("✅ Logout successful, redirecting...");
-
-            // Redirection vers l'écran de connexion
-            router.replace("/Auth/Index");
-          } catch (error) {
-            console.error("❌ Logout error:", error);
-            Alert.alert("Erreur", "Impossible de se déconnecter");
-          }
-        },
-      },
-    ]);
+  const getArtistTrack = (artist: Artist) => {
+    return artist.media?.find((m) => m.role === 'TRACK' && m.is_primary) || artist.media?.find((m) => m.role === 'TRACK');
   };
+
+  const getTrackName = (artist: Artist): string => {
+    const track = getArtistTrack(artist);
+    if (!track) return artist.city || '';
+    if (track.title) return track.title;
+    const raw = (track.path || track.url || '').split('/').pop() || '';
+    return raw.replace(/\.[^.]+$/, '') || artist.city || '';
+  };
+
+  const handlePlayArtist = async (artist: Artist) => {
+    if (!isAuthenticated) {
+      setShowModal(true);
+      return;
+    }
+
+    const trackId = `track-${artist.id}`;
+    if (currentTrack?.id === trackId && isPlaying) {
+      pause();
+      return;
+    }
+
+    // Si le listing a déjà retourné les media avec l'URL, on joue directement
+    const track = getArtistTrack(artist);
+    if (track?.url) {
+      play({
+        id: trackId,
+        title: getTrackName(artist),
+        artistName: artist.name,
+        artistImage: artist.media_url || '',
+        duration: '',
+        url: track.url,
+      });
+      return;
+    }
+
+    // Sinon on fetch le détail pour récupérer l'URL de la track
+    try {
+      const detail = await artistsService.getDetail(artist.id);
+      const detailTrack = detail.media?.find((m) => m.role === 'TRACK' && m.is_primary)
+        || detail.media?.find((m) => m.role === 'TRACK');
+      const url = detailTrack ? getMediaUrl(detailTrack) || detailTrack.url : undefined;
+      // Pas d'URL = visiteur non connecté (tracks masquées par l'API) → afficher le modal
+      if (!url) {
+        setShowModal(true);
+        return;
+      }
+      play({
+        id: trackId,
+        title: detailTrack!.title || artist.name,
+        artistName: artist.name,
+        artistImage: artist.media_url || '',
+        duration: '',
+        url,
+      });
+    } catch {
+      console.warn('Impossible de charger la track de', artist.name);
+    }
+  };
+
+
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
@@ -219,8 +165,8 @@ export default function HomeScreen() {
       >
         <View style={styles.locationContainer}>
           <LocationBadge
-            location="Annecy"
-            onPress={() => console.log("Change location")}
+            location={displayCity}
+            onPress={() => setShowLocationModal(true)}
           />
         </View>
         <ThemedView style={styles.titleContainer}>
@@ -233,20 +179,26 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.artistsSection}
         >
-          {exampleArtists.map((artist) => (
+          {artistsLoading && (
+            <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
+          )}
+          {artists.map((artist) => (
             <ArtistCard
               key={artist.id}
-              id={artist.id}
+              id={String(artist.id)}
               name={artist.name}
-              subtitle={artist.subtitle}
-              location={artist.location}
-              imageUrl={artist.imageUrl}
-              styles={artist.styles}
-              trackId={artist.mainTrack?.id}
-              isFavorite={favorites[artist.id]}
+              subtitle={getTrackName(artist)}
+              location={artist.city || ''}
+              imageUrl={(() => {
+                const profileMedia = artist.media?.find((m) => m.role === 'PROFILE' && m.is_primary);
+                return profileMedia ? getMediaUrl(profileMedia) || '' : artist.media_url || '';
+              })()}
+              styles={artist.styles?.map((s) => s.name) || []}
+              trackId={`track-${artist.id}`}
+              isFavorite={isFavorite(String(artist.id))}
               onPress={() => router.push(`/artist/${artist.id}`)}
-              onFavoritePress={() => guard(() => toggleFavorite(artist.id))}
-              onPlayPress={() => guard(() => handlePlayArtist(artist))}
+              onFavoritePress={() => guard(() => toggleFavorite(String(artist.id)))}
+              onPlayPress={() => handlePlayArtist(artist)}
             />
           ))}
         </ScrollView>
@@ -258,33 +210,46 @@ export default function HomeScreen() {
         </ThemedView>
 
         {/* Section Événements */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.eventSection}
-        >
-          {exampleEvents.map((event) => (
-            <View key={event.id} style={styles.eventCardWrapper}>
-              <EventCard
-                id={event.id}
-                title={event.title}
-                location={event.location}
-                distance={event.distance}
-                eventDate={event.eventDate}
-                timeRange={event.timeRange}
-                price={event.price}
-                imageUrl={event.imageUrl}
-                styles={event.styles}
-                friendsGoing={event.friendsGoing}
-                friendsAvatars={event.friendsAvatars}
-                onPress={() => router.push(`/event/${event.id}`)}
-              />
-            </View>
-          ))}
-        </ScrollView>
+        {eventsLoading ? (
+          <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
+        ) : events.length === 0 ? (
+          <View style={styles.eventEmptyContainer}>
+            <Text style={styles.eventEmptyTitle}>Les événements arrivent bientôt !</Text>
+            <Text style={styles.eventEmptySubtitle}>Revenez nous voir très vite.</Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.eventSection}
+          >
+            {events.map((event) => (
+              <View key={event.id} style={styles.eventCardWrapper}>
+                <EventCard
+                  id={event.id}
+                  title={event.title}
+                  location={event.location}
+                  distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
+                  eventDate={event.event_date}
+                  timeRange={formatTimeRange(event.event_date, event.end_time)}
+                  price={event.price ? parseFloat(event.price) : 0}
+                  imageUrl={event.image_url || ""}
+                  styles={event.styles?.map((s) => s.name) || []}
+                  earlyAccess={false}
+                  onPress={() => router.push(`/event/${event.id}`)}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </ScrollView>
 
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
+      <LocationSearchModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSelectLocation={(city) => setDisplayCity(city)}
+      />
     </SafeAreaView>
   );
 }
@@ -327,5 +292,23 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 20,
     marginBottom: 10,
+  },
+  eventEmptyContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 60,
+    alignItems: "center",
+    gap: 8,
+  },
+  eventEmptyTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
+    color: "#FFFFFF",
+    letterSpacing: -0.32,
+  },
+  eventEmptySubtitle: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 13,
+    color: "#7B7B7B",
+    letterSpacing: -0.26,
   },
 });

@@ -135,7 +135,7 @@ export default function ProfileScreen() {
         {isArtist && (
           <View style={styles.artistButtonsSection}>
             <Pressable
-              onPress={() => {/* TODO: gérer compte artiste */}}
+              onPress={() => router.push("/artist/profile_artist/1")}
               style={styles.artistMainButton}
             >
               <Text style={styles.artistMainButtonText}>

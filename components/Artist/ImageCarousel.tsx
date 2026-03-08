@@ -12,7 +12,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Star } from "lucide-react-native";
+import { Sparkle, Star } from "lucide-react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -75,7 +75,7 @@ export const ImageCarousel: React.FC<ImageCarouselProps> = ({
       {showFavoriteButton && (
         <Pressable onPress={onFavoritePress} style={styles.favoriteButton}>
           <BlurView intensity={10} style={styles.favoriteBlur}>
-            <Star
+            <Sparkle
               size={20}
               color="#FFFFFF"
               fill={isFavorite ? "#FFFFFF" : "transparent"}

@@ -77,7 +77,7 @@ apiClient.interceptors.response.use(
       });
     }
     
-    if (status === 401) {
+    if (status === 401 && error.config?.headers?.Authorization) {
       console.warn('⚠️ Unauthorized - Clearing auth data');
       await storage.clearAll();
     }
