@@ -1,118 +1,280 @@
-import React from "react";
-import { View, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import { router } from "expo-router";
 import { Header } from "@/components/Header/header";
-import { Link, router } from "expo-router";
-import { useAuth } from "@/hooks/use-auth";
+import { TicketCard } from "@/components/Ticket/TicketCard";
+import { ticketsService } from "@/services/tickets/tickets.service";
+import { Fonts } from "@/constants/theme";
+import type { Ticket } from "@/services/api/types";
+
+type Tab = "achete" | "passe";
 
 export default function TicketsScreen() {
-  const { logout, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("achete");
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 🚪 Fonction de déconnexion
-  const handleLogout = async () => {
-    Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
-      {
-        text: "Annuler",
-        style: "cancel",
-      },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            console.log("🚪 User clicked logout");
-            await logout();
-            console.log("✅ Logout successful, redirecting...");
-            router.replace("/Auth/Index");
-          } catch (error) {
-            console.error("❌ Logout error:", error);
-            Alert.alert("Erreur", "Impossible de se déconnecter");
-          }
-        },
-      },
-    ]);
-  };
+  useEffect(() => {
+    ticketsService
+      .getMyTickets()
+      .then(setTickets)
+      .catch(() => setTickets([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const now = new Date();
+
+  // "Acheté" = billets valides ou en attente pour des événements à venir
+  const achetedTickets = tickets.filter(
+    (t) =>
+      (t.status === "confirmed" || t.status === "pending") &&
+      t.event &&
+      new Date(t.event.event_date) >= now
+  );
+  // "Passé" = événement terminé, ou billet remboursé/annulé
+  const passeTickets = tickets.filter(
+    (t) =>
+      t.status === "refunded" ||
+      t.status === "cancelled" ||
+      (t.event && new Date(t.event.event_date) < now)
+  );
+
+  const displayed = activeTab === "achete" ? achetedTickets : passeTickets;
+  const isEmpty = !isLoading && displayed.length === 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
-      <Header title="Mes Billets" showBackButton showMenuButton />
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <Header title="Mes billets" showBackButton showMenuButton />
+
+      {/* Tabs */}
+      <View style={styles.tabsWrapper}>
+        <View style={styles.tabsRow}>
+          <Pressable
+            style={styles.tabItem}
+            onPress={() => setActiveTab("achete")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "achete" ? styles.tabTextActive : styles.tabTextInactive,
+              ]}
+            >
+              Acheté
+            </Text>
+          </Pressable>
+          <Pressable
+            style={styles.tabItem}
+            onPress={() => setActiveTab("passe")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "passe" ? styles.tabTextActive : styles.tabTextInactive,
+              ]}
+            >
+              Passé
+            </Text>
+          </Pressable>
+        </View>
+        {/* Indicator */}
+        <View style={styles.indicatorRow}>
+          <View style={styles.indicatorBg} />
+          <View
+            style={[
+              styles.indicator,
+              activeTab === "passe" && styles.indicatorRight,
+            ]}
+          />
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ThemedText type="body">Mes Billets</ThemedText>
+        {isLoading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color="#FC5F67" />
+          </View>
+        ) : isEmpty ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Pas de billet pour le moment</Text>
+            <Text style={styles.emptySubtitle}>
+              Retrouve toutes les places que tu as acheté ici !
+            </Text>
+            <Pressable
+              style={styles.exploreButton}
+              onPress={() => router.push("/(tabs)/events")}
+            >
+              <Text style={styles.exploreButtonText}>Explorer</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.ticketsList}>
+            {displayed.map((ticket) => (
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+              />
+            ))}
+          </View>
+        )}
 
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test onboarding</ThemedText>
-          <ThemedText type="link">
-            <Link href="/OnBoarding/onboarding">Ouvrir le modal</Link>
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test Page connexion</ThemedText>
-          <Pressable
-            onPress={() => {
-              router.push("/Auth/Index");
-            }}
-          >
-            <ThemedText type="link">Go to Auth Index</ThemedText>
-          </Pressable>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test Compléter profil</ThemedText>
-          <Pressable
-            onPress={() => {
-              router.push("/profile-completion");
-            }}
-          >
-            <ThemedText type="link">Go to Profile Completion</ThemedText>
-          </Pressable>
-        </ThemedView>
-
-        <ThemedView style={styles.stepContainer}>
-          <ThemedText type="subtitle">Test déco</ThemedText>
-          <Pressable
-            onPress={handleLogout}
-            disabled={isLoading}
-            style={({ pressed }) => [styles.logoutButton]}
-          >
-            <ThemedText type="body">
-              {isLoading ? "Déconnexion en cours..." : "Se déconnecter"}
-            </ThemedText>
-          </Pressable>
-        </ThemedView>
+        {/* FAQ section */}
+        <View style={styles.faqSection}>
+          <Text style={styles.faqGray}>
+            Vous ne trouvez pas votre bonheur ? Des questions ?{" "}
+          </Text>
+          <Text style={styles.faqWhite}>Rendez-vous dans notre FAQ.</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#111111",
+  },
+  tabsWrapper: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  tabsRow: {
+    flexDirection: "row",
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingBottom: 10,
+  },
+  tabText: {
+    fontSize: 14,
+    letterSpacing: -0.28,
+  },
+  tabTextActive: {
+    fontFamily: Fonts.bold,
+    color: "#FFFFFF",
+  },
+  tabTextInactive: {
+    fontFamily: Fonts.semiBold,
+    color: "rgba(255,255,255,0.5)",
+  },
+  indicatorRow: {
+    height: 2,
+    position: "relative",
+  },
+  indicator: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    height: 2,
+    width: "50%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 46,
+  },
+  indicatorRight: {
+    left: "50%",
+  },
+  indicatorBg: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderRadius: 46,
+    zIndex: -1,
   },
   scrollView: {
     flex: 1,
   },
-  content: {
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 24,
+    justifyContent: "space-between",
+  },
+  centerContent: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    gap: 16,
-  },
-  stepContainer: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  logoutButton: {
-    backgroundColor: "#ef4444",
-    padding: 16,
-    borderRadius: 8,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    paddingVertical: 60,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 32,
+    paddingVertical: 80,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 16,
+    color: "#FFFFFF",
+    letterSpacing: -0.32,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#959595",
+    letterSpacing: -0.28,
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: -20,
+  },
+  exploreButton: {
+    backgroundColor: "#FFFFFF",
+    height: 44,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    width: "100%",
+  },
+  exploreButtonText: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#000000",
+    letterSpacing: -0.28,
+  },
+  ticketsList: {
+    gap: 24,
+  },
+  faqSection: {
+    paddingVertical: 15,
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 24,
+  },
+  faqGray: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#959595",
+    letterSpacing: -0.24,
+    lineHeight: 14,
+    textAlign: "center",
+    width: "100%",
+  },
+  faqWhite: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#FFFFFF",
+    letterSpacing: -0.24,
+    lineHeight: 14,
+    textAlign: "center",
+    width: "100%",
   },
 });

@@ -43,6 +43,7 @@ export const StyleBadges: React.FC<StyleBadgesProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 4,
   },
   badge: {

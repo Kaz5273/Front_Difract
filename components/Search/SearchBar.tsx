@@ -9,6 +9,8 @@ interface SearchBarProps {
   placeholder?: string;
   onPress?: () => void;
   editable?: boolean;
+  onFocus?: () => void;
+  autoFocus?: boolean;
 }
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -17,6 +19,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = "Artistes, morceaux, lieux, ect.",
   onPress,
   editable = true,
+  onFocus,
+  autoFocus = false,
 }) => {
   const content = (
     <View style={styles.container}>
@@ -29,6 +33,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         placeholderTextColor="#8a8a8a"
         editable={editable}
         pointerEvents={onPress ? "none" : "auto"}
+        onFocus={onFocus}
+        autoFocus={autoFocus}
       />
     </View>
   );

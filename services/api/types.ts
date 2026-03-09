@@ -95,6 +95,7 @@ export interface VoteEvent {
   voting_start_date?: string | null;
   voting_end_date?: string | null;
   is_voting_open?: boolean;
+  voting_time_remaining?: number | null;
 }
 
 export interface VoteArtist {
@@ -115,6 +116,7 @@ export interface Vote {
 }
 
 export interface CreateVoteRequest {
+  user_id: number;
   artist_id: number;
   event_id: number;
 }
@@ -208,6 +210,25 @@ export interface MediaReorderPayload {
   type: 'IMAGE' | 'AUDIO';
   role: 'GALLERY' | 'TRACK';
   order: number[];
+}
+
+// ============================================
+// TICKET TYPES
+// ============================================
+export interface Ticket {
+  id: number;
+  event_id: number;
+  user_id: number;
+  tier: 'early_access' | 'standard' | 'last_minute';
+  price: string; // retourné en string par l'API ex: "20.00"
+  has_insurance: boolean;
+  status: 'pending' | 'confirmed' | 'refunded' | 'cancelled';
+  qr_code: string;
+  ls_order_id: string | null;
+  scanned_at: string | null;
+  event?: Pick<Event, 'id' | 'title' | 'location' | 'event_date' | 'image_url'>;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============================================

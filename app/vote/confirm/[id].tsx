@@ -1,38 +1,78 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Pressable,
   View,
   Text,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { BlurView } from "expo-blur";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Check } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Fonts } from "@/constants/theme";
 import { VoteArtistCard } from "@/components/Vote/VoteArtistCard";
-
-// Données brutes - à remplacer par les vraies données API
-const MOCK_ARTIST = {
-  id: "1",
-  name: "Choi",
-  trackTitle: "Road to hell",
-  imageUrl:
-    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
-  styles: ["Techno", "House", "Minimal", "Ambient", "Electro", "Trance"],
-};
+import { artistsService, ArtistDetail } from "@/services/artists/artists.service";
+import { votesService } from "@/services/votes/votes.service";
+import { getMediaUrl } from "@/services/api/client";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function VoteConfirmScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, artistId } = useLocalSearchParams<{ id: string; artistId: string }>();
+  const eventId = Number(id);
+  const artistIdNum = Number(artistId);
+  const userId = useAuthStore((s) => s.user?.id);
 
-  const handleConfirm = () => {
-    // TODO: appel API pour confirmer le vote
-    router.replace(`/vote/${id}`);
+  const [artist, setArtist] = useState<ArtistDetail | null>(null);
+  const [isLoadingArtist, setIsLoadingArtist] = useState(true);
+  const [isVoting, setIsVoting] = useState(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!artistIdNum) return;
+    artistsService.getDetail(artistIdNum)
+      .then(setArtist)
+      .catch(() => setArtist(null))
+      .finally(() => setIsLoadingArtist(false));
+  }, [artistIdNum]);
+
+  const handleConfirm = async () => {
+    if (isVoting) return;
+    setIsVoting(true);
+    setVoteError(null);
+    try {
+      await votesService.create({ user_id: userId!, artist_id: artistIdNum, event_id: eventId });
+      setShowSuccess(true);
+    } catch (e: any) {
+      const data = e?.response?.data;
+      const firstFieldError = data?.errors
+        ? (Object.values(data.errors as Record<string, string[]>)[0])?.[0]
+        : null;
+      setVoteError(firstFieldError || data?.message || "Une erreur est survenue, réessayez.");
+      setIsVoting(false);
+    }
   };
 
-  const handleCancel = () => {
-    router.back();
+  const handleSuccessClose = () => {
+    setShowSuccess(false);
+    router.replace(`/event/${id}`);
   };
+
+  const profileMedia = artist?.media?.find((m) => m.role === "PROFILE" && m.is_primary);
+  const imageUrl = profileMedia ? getMediaUrl(profileMedia) || "" : "";
+
+  const trackMedia = artist?.media?.find((m) => m.role === "TRACK");
+  const trackTitle =
+    trackMedia?.title ||
+    trackMedia?.path?.split("/").pop()?.replace(/\.[^.]+$/, "") ||
+    "Track";
+
+  const styles_list = [
+    ...(artist?.primary_style ? [artist.primary_style.name] : []),
+    ...(artist?.secondary_styles?.map((s) => s.name) ?? []),
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -48,13 +88,19 @@ export default function VoteConfirmScreen() {
 
         {/* Artist Card */}
         <View style={styles.cardContainer}>
-          <VoteArtistCard
-            name={MOCK_ARTIST.name}
-            trackTitle={MOCK_ARTIST.trackTitle}
-            imageUrl={MOCK_ARTIST.imageUrl}
-            styles={MOCK_ARTIST.styles}
-            showControls={false}
-          />
+          {isLoadingArtist ? (
+            <View style={styles.cardPlaceholder}>
+              <ActivityIndicator size="large" color="#FC5F67" />
+            </View>
+          ) : (
+            <VoteArtistCard
+              name={artist?.name ?? ""}
+              trackTitle={trackTitle}
+              imageUrl={imageUrl}
+              styles={styles_list}
+              showControls={false}
+            />
+          )}
         </View>
 
         {/* Question */}
@@ -77,24 +123,58 @@ export default function VoteConfirmScreen() {
           <Text style={styles.warningGray}> !</Text>
         </Text>
 
-        {/* Spacer */}
+        {voteError && (
+          <Text style={styles.errorText}>{voteError}</Text>
+        )}
+
         <View style={{ flex: 1 }} />
 
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
-          <Pressable onPress={handleConfirm} style={styles.confirmButton}>
-            <Text style={styles.confirmButtonText}>
-              Je confirme mon vote !
-            </Text>
+          <Pressable
+            onPress={handleConfirm}
+            style={[styles.confirmButton, isVoting && styles.confirmButtonDisabled]}
+            disabled={isVoting}
+          >
+            {isVoting ? (
+              <ActivityIndicator size="small" color="#000000" />
+            ) : (
+              <Text style={styles.confirmButtonText}>Je confirme mon vote !</Text>
+            )}
           </Pressable>
 
-          <Pressable onPress={handleCancel} style={styles.cancelButton}>
+          <Pressable onPress={() => router.back()} style={styles.cancelButton} disabled={isVoting}>
             <Text style={styles.cancelButtonText}>
               Je préfère prendre mon temps
             </Text>
           </Pressable>
         </View>
       </View>
+
+      {/* Success modal */}
+      <Modal
+        visible={showSuccess}
+        transparent
+        animationType="fade"
+        onRequestClose={handleSuccessClose}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconContainer}>
+              <Check size={36} color="#111111" strokeWidth={2.5} />
+            </View>
+            <Text style={styles.modalTitle}>Vote enregistré !</Text>
+            <Text style={styles.modalBody}>
+              Votre vote pour{" "}
+              <Text style={styles.modalArtistName}>{artist?.name}</Text>
+              {" "}a bien été pris en compte.
+            </Text>
+            <Pressable onPress={handleSuccessClose} style={styles.modalButton}>
+              <Text style={styles.modalButtonText}>Retour à l'événement</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -132,6 +212,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 48,
   },
+  cardPlaceholder: {
+    width: 280,
+    height: 280,
+    borderRadius: 20,
+    backgroundColor: "#1D1C1B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   questionText: {
     fontFamily: Fonts.regular,
     fontSize: 16,
@@ -161,6 +249,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.42,
     lineHeight: 18,
   },
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: "#FC5F67",
+    textAlign: "center",
+    marginTop: 16,
+  },
   buttonsContainer: {
     alignItems: "center",
     gap: 8,
@@ -173,6 +268,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 27,
     width: 323,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.6,
   },
   confirmButtonText: {
     fontFamily: Fonts.regular,
@@ -192,6 +290,65 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontSize: 14,
     color: "#FFFFFF",
+    letterSpacing: -0.28,
+  },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    backgroundColor: "#1D1C1B",
+    borderRadius: 24,
+    padding: 32,
+    alignItems: "center",
+    gap: 16,
+    width: "100%",
+  },
+  modalIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontFamily: Fonts.regular,
+    fontSize: 22,
+    color: "#FFFFFF",
+    letterSpacing: -0.88,
+  },
+  modalBody: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#848484",
+    textAlign: "center",
+    letterSpacing: -0.28,
+    lineHeight: 20,
+  },
+  modalArtistName: {
+    fontFamily: Fonts.bold,
+    color: "#FFFFFF",
+  },
+  modalButton: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 27,
+    marginTop: 8,
+    width: "100%",
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: "#000000",
     letterSpacing: -0.28,
   },
 });

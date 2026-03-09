@@ -29,6 +29,7 @@ export interface CarouselArtist {
     title: string;
     duration: string;
   };
+  trackUrl?: string | null;
 }
 
 interface VoteArtistCarouselProps {

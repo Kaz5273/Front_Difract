@@ -15,7 +15,8 @@ import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
 import { useVotes } from "@/hooks/use-votes";
 import { useAuthStore } from "@/store/auth-store";
-import { locationService } from "@/services/location/location.service";
+import { useLocationStore } from "@/store/location-store";
+import { LocationSearchModal } from "@/components/Modals/LocationSearchModal";
 
 function formatEventDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -32,8 +33,8 @@ export default function VoteScreen() {
   const [quickFilterLabel, setQuickFilterLabel] = useState<string | undefined>(undefined);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const user = useAuthStore((s) => s.user);
-  const [displayCity, setDisplayCity] = useState("Ma localisation");
+  const { city: displayCity, setCity } = useLocationStore();
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const { groupedByEvent, isLoading, error, fetchMyVotes } = useVotes();
 
   useEffect(() => {
@@ -41,18 +42,6 @@ export default function VoteScreen() {
       fetchMyVotes();
     }
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (user?.city) {
-      setDisplayCity(user.city);
-    } else {
-      locationService.getCachedLocation().then(async (coords) => {
-        if (!coords) return;
-        const city = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
-        if (city) setDisplayCity(city);
-      });
-    }
-  }, [user?.city]);
 
   // Filtrer par onglet
   // "Vote en cours" : event PUBLISHED (vote ouvert ou non encore terminé)
@@ -77,7 +66,7 @@ export default function VoteScreen() {
         <View style={styles.badgesContainer}>
           <LocationBadge
             location={displayCity}
-            onPress={() => guard(() => console.log("Change location"))}
+            onPress={() => guard(() => setShowLocationModal(true))}
           />
           <CalendarBadge
             onPress={() => guard(() => setCalendarVisible(true))}
@@ -185,7 +174,13 @@ export default function VoteScreen() {
               eventName={group.event.title}
               eventDate={formatEventDate(group.event.event_date)}
               location={group.event.location}
-              endDate={new Date(group.event.event_date)}
+              secondsRemaining={
+                group.event.voting_time_remaining != null && group.event.voting_time_remaining > 0
+                  ? group.event.voting_time_remaining
+                  : group.event.voting_end_date
+                  ? Math.max(0, Math.floor((new Date(group.event.voting_end_date).getTime() - Date.now()) / 1000))
+                  : 0
+              }
               artists={group.artists.map((artist, index) => ({
                 id: String(artist.id),
                 name: artist.name,
@@ -208,6 +203,11 @@ export default function VoteScreen() {
         </View>
       </ScrollView>
 
+      <LocationSearchModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSelectLocation={(city) => { setCity(city); setShowLocationModal(false); }}
+      />
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );

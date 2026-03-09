@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -6,6 +6,9 @@ import {
   ActivityIndicator,
   Text,
   Dimensions,
+  Pressable,
+  Image,
+  Keyboard,
 } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -18,6 +21,7 @@ import { SearchBar } from "@/components/Search/SearchBar";
 import FilterBadge from "@/components/Badges/FilterBadge";
 import { StyleFilterModal } from "@/components/Modals/StyleFilterModal";
 import { ArtistCard } from "@/components/Artist/ArtistCard";
+import { StyleBadges } from "@/components/Badges/StyleBadges";
 import { useStyles } from "@/hooks/useStyle";
 import { router } from "expo-router";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
@@ -29,9 +33,12 @@ import { Artist } from "@/services/api/types";
 import { getMediaUrl } from "@/services/api/client";
 import { artistsService } from "@/services/artists/artists.service";
 import { useFavoritesStore } from "@/store/favorites-store";
+import { X } from "lucide-react-native";
+import { StyleFilter } from "@/components/Button/StyleFilter";
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
   const [styleFilterVisible, setStyleFilterVisible] = useState(false);
   const { load: loadFavorites, add: addFavorite, remove: removeFavorite, isFavorite } = useFavoritesStore();
@@ -92,6 +99,12 @@ export default function SearchScreen() {
     }
   };
 
+  const closeSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery("");
+    Keyboard.dismiss();
+  }, []);
+
   // Artistes filtrés par recherche + styles
   const filteredArtists = useMemo(() => {
     return artists.filter((a) => {
@@ -102,6 +115,14 @@ export default function SearchScreen() {
       return matchesSearch && matchesStyle;
     });
   }, [artists, searchQuery, selectedStyleIds]);
+
+  // Artistes filtrés pour l'overlay (recherche seulement, sans filtre style)
+  const searchOverlayArtists = useMemo(() => {
+    if (!searchQuery) return [];
+    return artists.filter((a) =>
+      a.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [artists, searchQuery]);
 
   // Groupement par style sélectionné (quand filtres actifs)
   const groupedBySelectedStyles = useMemo(() => {
@@ -134,7 +155,6 @@ export default function SearchScreen() {
     return groups;
   }, [filteredArtists, selectedStyleIds]);
 
-  const isSearching = !!searchQuery;
   const isStyleFiltering = selectedStyleIds.length > 0;
 
   const renderArtistCard = (artist: Artist, gridMode: boolean = false) => (
@@ -155,10 +175,42 @@ export default function SearchScreen() {
     />
   );
 
+  const renderSearchResultRow = (artist: Artist) => {
+    const imageUrl = getArtistImageUrl(artist);
+    const artistStyles = getArtistStyles(artist);
+    return (
+      <Pressable
+        key={artist.id}
+        style={overlayStyles.resultRow}
+        onPress={() => {
+          closeSearch();
+          router.push(`/artist/${artist.id}`);
+        }}
+      >
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={overlayStyles.resultImage}
+          />
+        ) : (
+          <View style={overlayStyles.resultImagePlaceholder} />
+        )}
+        <Text style={overlayStyles.resultName} numberOfLines={1}>
+          {artist.name}
+        </Text>
+        <View style={overlayStyles.resultSpacer} />
+        {artistStyles.length > 0 && (
+          <StyleBadges styles={artistStyles} maxVisible={1} />
+        )}
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <Header title="Recherche" showBackButton showMenuButton />
 
+      <View style={styles.contentArea}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -172,6 +224,7 @@ export default function SearchScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Rechercher..."
+                onFocus={() => setIsSearchActive(true)}
               />
             </View>
             <FilterBadge
@@ -180,6 +233,13 @@ export default function SearchScreen() {
             />
           </View>
         </View>
+
+        {/* Slider horizontal des styles */}
+        <StyleFilter
+          styles={musicStyles}
+          selectedStyleId={selectedStyleIds.length === 1 ? selectedStyleIds[0] : null}
+          onSelectStyle={(id) => setSelectedStyleIds(id !== null ? [id] : [])}
+        />
 
         <StyleFilterModal
           visible={styleFilterVisible}
@@ -192,9 +252,8 @@ export default function SearchScreen() {
         {isLoading ? (
           <ActivityIndicator size="small" color="#FC5F67" style={styles.loader} />
         ) : isStyleFiltering ? (
-          /* Résultats groupés par style sélectionné */
           <>
-            {isSearching && filteredArtists.length === 0 ? (
+            {filteredArtists.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Aucun artiste trouvé</Text>
               </View>
@@ -213,21 +272,7 @@ export default function SearchScreen() {
               ))
             )}
           </>
-        ) : isSearching ? (
-          /* Résultats plats quand recherche textuelle uniquement */
-          <>
-            {filteredArtists.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Aucun artiste trouvé</Text>
-              </View>
-            ) : (
-              <View style={styles.flatGrid}>
-                {filteredArtists.map((a) => renderArtistCard(a, true))}
-              </View>
-            )}
-          </>
         ) : (
-          /* Vue par défaut — groupée par style primaire */
           <>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Nouveaux sur la plateforme</Text>
@@ -262,6 +307,43 @@ export default function SearchScreen() {
         </View>
       </ScrollView>
 
+      {/* Search overlay */}
+      {isSearchActive && (
+        <View style={overlayStyles.overlay}>
+          {/* Search bar row with close button */}
+          <View style={overlayStyles.searchRow}>
+            <Pressable style={overlayStyles.closeButton} onPress={closeSearch}>
+              <X size={18} color="#FFFFFF" strokeWidth={2} />
+            </Pressable>
+            <View style={overlayStyles.searchBarFlex}>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Rechercher..."
+                autoFocus
+              />
+            </View>
+          </View>
+
+          {/* Results */}
+          <ScrollView
+            style={overlayStyles.resultsList}
+            contentContainerStyle={overlayStyles.resultsContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {searchQuery.length === 0 ? null : searchOverlayArtists.length === 0 ? (
+              <View style={overlayStyles.emptyContainer}>
+                <Text style={overlayStyles.emptyText}>Aucun artiste trouvé</Text>
+              </View>
+            ) : (
+              searchOverlayArtists.map((a) => renderSearchResultRow(a))
+            )}
+          </ScrollView>
+        </View>
+      )}
+      </View>
+
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );
@@ -271,6 +353,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#111111",
+  },
+  contentArea: {
+    flex: 1,
+    position: "relative",
   },
   scrollView: {
     flex: 1,
@@ -298,7 +384,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionTitle: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
     fontSize: 20,
     color: "#FFFFFF",
     letterSpacing: -0.4,
@@ -344,5 +430,79 @@ const styles = StyleSheet.create({
     color: "#FC5F67",
     textAlign: "center",
     letterSpacing: -0.26,
+  },
+});
+
+const overlayStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#111111",
+    paddingTop: 16,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 4,
+  },
+  closeButton: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchBarFlex: {
+    flex: 1,
+  },
+  resultsList: {
+    flex: 1,
+    marginTop: 10,
+  },
+  resultsContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingBottom: 130,
+    gap: 14,
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    gap: 16,
+  },
+  resultImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
+  },
+  resultImagePlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
+    backgroundColor: "#212121",
+  },
+  resultName: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: "#FFFFFF",
+    letterSpacing: -0.42,
+    flexShrink: 1,
+  },
+  resultSpacer: {
+    flex: 1,
+  },
+  emptyContainer: {
+    paddingVertical: 60,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontFamily: Fonts.regular,
+    fontSize: 16,
+    color: "#7B7B7B",
+    letterSpacing: -0.32,
   },
 });

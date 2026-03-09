@@ -39,6 +39,13 @@ export const eventService = {
     return response.data;
   },
 
+  getPast: async (limit?: number): Promise<Event[]> => {
+    const response = await apiClient.get<Event[]>(ENDPOINTS.EVENTS_PAST, {
+      params: limit ? { limit } : undefined,
+    });
+    return response.data;
+  },
+
   getById: async (id: number): Promise<Event> => {
     const response = await apiClient.get<Event>(ENDPOINTS.EVENT_BY_ID(id));
     return response.data;

@@ -4,44 +4,40 @@ import { Clock } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 
 interface VoteCountdownProps {
-  endDate: Date;
+  secondsRemaining: number;
 }
 
-export const VoteCountdown: React.FC<VoteCountdownProps> = ({ endDate }) => {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+export const VoteCountdown: React.FC<VoteCountdownProps> = ({ secondsRemaining }) => {
+  const [remaining, setRemaining] = useState(Math.max(0, secondsRemaining));
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = endDate.getTime() - new Date().getTime();
+    const initial = Math.max(0, secondsRemaining);
+    setRemaining(initial);
 
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        setTimeLeft({
-          days,
-          hours,
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60),
-        });
-      }
-    };
+    if (initial <= 0) return;
 
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const next = Math.max(0, initial - elapsed);
+      setRemaining(next);
+      if (next <= 0) clearInterval(timer);
+    }, 1000);
 
     return () => clearInterval(timer);
-  }, [endDate]);
+  }, [secondsRemaining]);
 
-  const formatNumber = (num: number) => num.toString().padStart(2, "0");
+  const days = Math.floor(remaining / 86400);
+  const hours = Math.floor((remaining % 86400) / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const seconds = remaining % 60;
 
-  const timeString = timeLeft.days > 0
-    ? `${timeLeft.days}j ${formatNumber(timeLeft.hours)}:${formatNumber(timeLeft.minutes)}:${formatNumber(timeLeft.seconds)}`
-    : `${formatNumber(timeLeft.hours)}:${formatNumber(timeLeft.minutes)}:${formatNumber(timeLeft.seconds)}`;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  const timeString =
+    days > 0
+      ? `${days}j ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+      : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 
   return (
     <View style={styles.container}>

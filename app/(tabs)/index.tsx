@@ -27,6 +27,7 @@ import { Artist } from "@/services/api/types";
 import { getMediaUrl } from "@/services/api/client";
 import { artistsService } from "@/services/artists/artists.service";
 import { useFavoritesStore } from "@/store/favorites-store";
+import { useLocationStore } from "@/store/location-store";
 
 function formatTimeRange(eventDate: string, endTime?: string | null): string {
   const start = new Date(eventDate);
@@ -42,7 +43,7 @@ function formatTimeRange(eventDate: string, endTime?: string | null): string {
 export default function HomeScreen() {
   const { user, isAuthenticated } = useAuth();
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
-  const [displayCity, setDisplayCity] = useState<string>("Ma localisation");
+  const { city: displayCity, setCity: setDisplayCity } = useLocationStore();
   const [showLocationModal, setShowLocationModal] = useState(false);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const { artists, isLoading: artistsLoading, fetchArtists } = useArtists();
@@ -52,6 +53,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    // Ne pas écraser une ville déjà choisie par l'utilisateur
+    if (displayCity) return;
     if (user?.city) {
       setDisplayCity(user.city);
       return;
@@ -115,16 +118,22 @@ export default function HomeScreen() {
       return;
     }
 
-    // Si le listing a déjà retourné les media avec l'URL, on joue directement
+    const getArtistImage = (a: Artist) => {
+      const profileMedia = a.media?.find((m) => m.role === 'PROFILE' && m.is_primary);
+      return profileMedia ? getMediaUrl(profileMedia) || '' : a.media_url || '';
+    };
+
+    // Si le listing a déjà retourné les media avec url ou path, on joue directement
     const track = getArtistTrack(artist);
-    if (track?.url) {
+    const trackUrl = track ? getMediaUrl(track) || track.url : null;
+    if (trackUrl) {
       play({
         id: trackId,
         title: getTrackName(artist),
         artistName: artist.name,
-        artistImage: artist.media_url || '',
+        artistImage: getArtistImage(artist),
         duration: '',
-        url: track.url,
+        url: trackUrl,
       });
       return;
     }
@@ -135,16 +144,16 @@ export default function HomeScreen() {
       const detailTrack = detail.media?.find((m) => m.role === 'TRACK' && m.is_primary)
         || detail.media?.find((m) => m.role === 'TRACK');
       const url = detailTrack ? getMediaUrl(detailTrack) || detailTrack.url : undefined;
-      // Pas d'URL = visiteur non connecté (tracks masquées par l'API) → afficher le modal
+      // Pas d'URL : si non connecté → modal création compte, sinon → aucune musique disponible
       if (!url) {
-        setShowModal(true);
+        if (!isAuthenticated) setShowModal(true);
         return;
       }
       play({
         id: trackId,
         title: detailTrack!.title || artist.name,
         artistName: artist.name,
-        artistImage: artist.media_url || '',
+        artistImage: getArtistImage(artist),
         duration: '',
         url,
       });
@@ -232,10 +241,10 @@ export default function HomeScreen() {
                   distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
                   eventDate={event.event_date}
                   timeRange={formatTimeRange(event.event_date, event.end_time)}
-                  price={event.price ? parseFloat(event.price) : 0}
                   imageUrl={event.image_url || ""}
                   styles={event.styles?.map((s) => s.name) || []}
-                  earlyAccess={false}
+                  isVotingOpen={event.is_voting_open ?? false}
+                  votingEndDate={event.voting_end_date}
                   onPress={() => router.push(`/event/${event.id}`)}
                 />
               </View>

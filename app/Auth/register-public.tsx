@@ -3,6 +3,7 @@ import IconGoogle from "@/components/icons/iconGoogle";
 import { StepProfilePhoto } from "@/components/register-artist/StepProfilePhoto";
 import { Fonts } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth-store";
 import { locationService } from "@/services/location/location.service";
 import { userService } from "@/services/user/user.service";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,7 +39,7 @@ export default function RegisterPublicScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCompletion, setShowCompletion] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
-  const { register, verifyEmail, resendCode, updateUser, user, isLoading, error, clearError } =
+  const { register, verifyEmail, resendCode, updateUser, isLoading, error, clearError } =
     useAuth();
   const codeInputRefs = useRef<(TextInputType | null)[]>([]);
 
@@ -185,8 +186,9 @@ export default function RegisterPublicScreen() {
             const uploadedMedia = Array.isArray(uploadResponse.media)
               ? uploadResponse.media[0]
               : uploadResponse.media;
-            if (user && uploadedMedia) {
-              updateUser({ ...user, media: [...(user.media || []), uploadedMedia] });
+            const currentUser = useAuthStore.getState().user;
+            if (currentUser && uploadedMedia) {
+              updateUser({ ...currentUser, media: [...(currentUser.media || []), uploadedMedia] });
             }
           } catch {
             // Upload échoue silencieusement, l'utilisateur pourra le refaire depuis son profil

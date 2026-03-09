@@ -159,7 +159,7 @@ const s = StyleSheet.create({
     justifyContent: "flex-end",
   },
   container: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 10,
@@ -169,7 +169,7 @@ const s = StyleSheet.create({
   handleBar: {
     width: 53,
     height: 5,
-    backgroundColor: "#444444",
+    backgroundColor: "#1A1A1A",
     borderRadius: 16,
     alignSelf: "center",
     marginBottom: 20,
@@ -182,9 +182,9 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: Fonts.bold,
+    fontFamily: Fonts.regular,
     fontSize: 18,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     letterSpacing: -0.36,
   },
   closeButton: {
@@ -198,16 +198,16 @@ const s = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#212121",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#333333",
   },
   searchInput: {
     flex: 1,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.bold,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     padding: 0,
     margin: 0,
     letterSpacing: -0.28,
@@ -245,13 +245,13 @@ const s = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 9,
-    backgroundColor: "#2C2C2C",
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#818181",
   },
   chipActive: {
-    backgroundColor: "#2A1A1B",
+    backgroundColor: "#FC5F67",
     borderColor: "#FC5F67",
   },
   chipText: {
@@ -261,7 +261,7 @@ const s = StyleSheet.create({
     letterSpacing: -0.26,
   },
   chipTextActive: {
-    color: "#FC5F67",
+    color: "#000000",
   },
   noResult: {
     fontFamily: Fonts.regular,
@@ -280,13 +280,15 @@ const s = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 25,
-    backgroundColor: "#212121",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#7B7B7B",
   },
   resetText: {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
-    color: "#7B7B7B",
+    color: "#000000",
     letterSpacing: -0.28,
   },
   applyButton: {
@@ -299,7 +301,7 @@ const s = StyleSheet.create({
   applyText: {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#000000",
     letterSpacing: -0.28,
   },
 });

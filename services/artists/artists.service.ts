@@ -8,8 +8,9 @@ export interface ArtistDetail {
   bio: string | null;
   city: string | null;
   votes_count: number;
-  distance_km?: number;
-  styles: Array<{ id: number; name: string; pivot: { is_primary: boolean } }>;
+  distance_km?: number | null;
+  primary_style?: { id: number; name: string; pivot?: { is_primary: number } } | null;
+  secondary_styles?: Array<{ id: number; name: string; pivot?: { is_primary: number } }>;
   media?: Media[];
   social_links?: SocialLink[];
 }

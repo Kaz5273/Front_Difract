@@ -40,6 +40,17 @@ export const votesService = {
   },
 
   /**
+   * Vérifier si un utilisateur a déjà voté dans un event
+   * GET /votes?user_id=X&event_id=Y
+   */
+  checkVoted: async (userId: number, eventId: number): Promise<Vote | null> => {
+    const response = await apiClient.get<Vote[]>(ENDPOINTS.VOTES, {
+      params: { user_id: userId, event_id: eventId },
+    });
+    return response.data[0] ?? null;
+  },
+
+  /**
    * Supprimer un vote
    */
   delete: async (id: number | string): Promise<void> => {

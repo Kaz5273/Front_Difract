@@ -14,6 +14,37 @@ import { router } from "expo-router";
 import { StyleBadges } from "@/components/Badges/StyleBadges";
 import { EarlyAccessBadge } from "@/components/Badges/EarlyAccessBadge";
 
+type TicketTier = "early_access" | "standard" | "last_minute";
+
+const TIER_PRICES: Record<TicketTier, number> = {
+  early_access: 20,
+  standard: 25,
+  last_minute: 30,
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const toDay = (ms: number) => Math.floor(ms / DAY_MS) * DAY_MS;
+
+function getActiveTicketSale(
+  votingEndDate: string | null | undefined,
+  eventDate: string
+): { tier: TicketTier; price: number } | null {
+  const now = toDay(Date.now());
+  const event = toDay(new Date(eventDate).getTime());
+
+  if (votingEndDate) {
+    const votingEnd = toDay(new Date(votingEndDate).getTime());
+    if (now >= votingEnd && now <= votingEnd + 5 * DAY_MS)
+      return { tier: "early_access", price: TIER_PRICES.early_access };
+  }
+  if (now >= event - 20 * DAY_MS && now <= event - 5 * DAY_MS)
+    return { tier: "standard", price: TIER_PRICES.standard };
+  if (now >= event - 4 * DAY_MS && now <= event)
+    return { tier: "last_minute", price: TIER_PRICES.last_minute };
+  return null;
+}
+
 interface EventCardProps {
   id: number;
   title: string;
@@ -21,10 +52,10 @@ interface EventCardProps {
   distance?: string;
   eventDate: string;
   timeRange: string;
-  price: number;
   imageUrl: string;
   styles: string[];
-  earlyAccess?: boolean;
+  isVotingOpen?: boolean;
+  votingEndDate?: string | null;
   friendsGoing?: number;
   friendsAvatars?: string[];
   onPress?: () => void;
@@ -37,13 +68,15 @@ export const EventCard: React.FC<EventCardProps> = ({
   distance,
   eventDate,
   timeRange,
-  price,
   imageUrl,
   styles: musicStyles,
-  earlyAccess = true,
+  isVotingOpen = true,
+  votingEndDate,
   friendsAvatars = [],
   onPress,
 }) => {
+  const activeSale =
+    !isVotingOpen ? getActiveTicketSale(votingEndDate, eventDate) : null;
   const formatShortDate = (dateString: string) => {
     const date = new Date(dateString);
     const dayNum = date.getDate();
@@ -76,7 +109,9 @@ export const EventCard: React.FC<EventCardProps> = ({
         <Text style={styles.eventTitle} numberOfLines={1}>
           {title}
         </Text>
-        {earlyAccess && <EarlyAccessBadge price={price} />}
+        {activeSale && (
+          <EarlyAccessBadge price={activeSale.price} tier={activeSale.tier} />
+        )}
       </View>
 
       {/* Image Section */}

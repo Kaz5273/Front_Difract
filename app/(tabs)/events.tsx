@@ -15,6 +15,8 @@ import { GuestActionModal } from "@/components/GuestActionModal";
 import { useEvents } from "@/hooks/use-events";
 import { useStyles } from "@/hooks/useStyle";
 import { locationService } from "@/services/location/location.service";
+import { useLocationStore } from "@/store/location-store";
+import { LocationSearchModal } from "@/components/Modals/LocationSearchModal";
 import { Event } from "@/services/api/types";
 import { Fonts } from "@/constants/theme";
 
@@ -38,9 +40,10 @@ export default function EvenementsScreen() {
   const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [userCity, setUserCity] = useState<string>("Ma position");
+  const { city: userCity, setCity } = useLocationStore();
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const { showModal, setShowModal, guard } = useGuestGuard();
-  const { events, isLoading, error, fetchUpcoming } = useEvents();
+  const { events, pastEvents, isLoading, isPastLoading, error, pastError, fetchUpcoming, fetchPast } = useEvents();
   const { styles: musicStyles } = useStyles();
 
   useEffect(() => {
@@ -49,15 +52,16 @@ export default function EvenementsScreen() {
       const coords = cached ?? await locationService.getCurrentPosition();
       if (!coords) return;
       setUserCoords(coords);
-      const city = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
-      if (city) setUserCity(city);
     };
     loadLocation();
   }, []);
 
   useEffect(() => {
-    if (activeTab === "second") return;
-    fetchUpcoming();
+    if (activeTab === "second") {
+      fetchPast();
+    } else {
+      fetchUpcoming();
+    }
   }, [activeTab, userCoords]);
 
   // Filtrage côté client par style(s) (GET /api/events n'existe pas → filtrage local)
@@ -79,7 +83,7 @@ export default function EvenementsScreen() {
         <View style={styles.badgesContainer}>
           <LocationBadge
             location={userCity}
-            onPress={() => guard(() => console.log("Change location"))}
+            onPress={() => guard(() => setShowLocationModal(true))}
           />
           <CalendarBadge
             onPress={() => guard(() => setCalendarVisible(true))}
@@ -132,10 +136,44 @@ export default function EvenementsScreen() {
         />
 
         {/* Onglet "Événements passés" */}
-        {activeTab === "second" && (
+        {activeTab === "second" && isPastLoading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#FC5F67" />
+          </View>
+        )}
+        {activeTab === "second" && !isPastLoading && pastError && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyTitle}>Une erreur est survenue</Text>
+            <Text style={styles.emptySubtitle}>{pastError}</Text>
+            <Pressable onPress={() => fetchPast()} style={styles.retryButton}>
+              <Text style={styles.retryText}>Réessayer</Text>
+            </Pressable>
+          </View>
+        )}
+        {activeTab === "second" && !isPastLoading && !pastError && pastEvents.length === 0 && (
           <View style={styles.centerContainer}>
             <Text style={styles.emptyTitle}>Aucun événement passé{"\n"}pour le moment</Text>
             <Text style={styles.emptySubtitle}>Les événements passés{"\n"}apparaîtront ici.</Text>
+          </View>
+        )}
+        {activeTab === "second" && !isPastLoading && !pastError && pastEvents.length > 0 && (
+          <View style={styles.eventsContainer}>
+            {pastEvents.map((event: Event) => (
+              <EventCard
+                key={event.id}
+                id={event.id}
+                title={event.title}
+                location={event.location}
+                distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
+                eventDate={event.event_date}
+                timeRange={formatTimeRange(event.event_date, event.end_time)}
+                imageUrl={event.image_url || ""}
+                styles={event.styles?.map((s) => s.name) || []}
+                isVotingOpen={event.is_voting_open ?? false}
+                votingEndDate={event.voting_end_date}
+                onPress={() => router.push(`/event/${event.id}`)}
+              />
+            ))}
           </View>
         )}
 
@@ -185,10 +223,10 @@ export default function EvenementsScreen() {
                 distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
                 eventDate={event.event_date}
                 timeRange={formatTimeRange(event.event_date, event.end_time)}
-                price={event.price ? parseFloat(event.price) : 0}
                 imageUrl={event.image_url || ""}
                 styles={event.styles?.map((s) => s.name) || []}
-                earlyAccess={false}
+                isVotingOpen={event.is_voting_open ?? false}
+                votingEndDate={event.voting_end_date}
                 onPress={() => router.push(`/event/${event.id}`)}
               />
             ))}
@@ -204,6 +242,11 @@ export default function EvenementsScreen() {
         </View>
       </ScrollView>
 
+      <LocationSearchModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSelectLocation={(city) => { setCity(city); setShowLocationModal(false); }}
+      />
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   );

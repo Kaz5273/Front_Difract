@@ -1,22 +1,15 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   StyleSheet,
   Pressable,
   View,
   Text,
   ScrollView,
-  TextInput,
-  Image,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { BlurView } from "expo-blur";
-import {
-  ChevronLeft,
-  MapPin,
-  Calendar,
-  Clock,
-  MoreHorizontal,
-} from "lucide-react-native";
+import { ChevronLeft, MapPin, Calendar, Clock } from "lucide-react-native";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -27,81 +20,19 @@ import { VoteCountdown } from "@/components/Vote/VoteCountdown";
 import { Fonts } from "@/constants/theme";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
+import { useEventDetail } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
+import { getMediaUrl } from "@/services/api/client";
+import { Artist } from "@/services/api/types";
 
-// Données d'exemple - à remplacer par les vraies données
-const exampleEvents = [
-  {
-    id: 1,
-    title: "Espace rencontre",
-    location: "Annecy-le-vieux - 150km",
-    address: "33 Rue des Alpes - Annecy-le-Vieux",
-    distance: "150km",
-    eventDate: "2026-06-17T18:00:00.000Z",
-    timeRange: "19h à 00h",
-    duration: "6h00",
-    capacity: "400 places",
-    price: 22.5,
-    imageUrl:
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop",
-    styles: ["Techno", "Rock", "Expérimentale", "Rap"],
-    description:
-      "Joe Biden, 46 ans, est un véritable alchimiste du son. Entre ses doigts, un saxophone ténor prend vie ; ses improvisations, nourries de deux décennies d'amour inconditionnel pour le jazz, convoquent aussi bien les bruissements feutrés des clubs new-yorkais que l'énergie éclatante de la scène parisienne.",
-  },
-];
-
-const exampleParticipants = [
-  {
-    id: "1",
-    name: "Milly Bobby Brown",
-    rank: 1,
-    votes: 124,
-    imageUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop",
-    styles: ["Techno"],
-    isVoted: true,
-  },
-  {
-    id: "2",
-    name: "Billy Joe",
-    rank: 2,
-    votes: 120,
-    imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop",
-    styles: ["Rock"],
-    isVoted: false,
-  },
-  {
-    id: "3",
-    name: "Why so serious ?",
-    rank: 3,
-    votes: 95,
-    imageUrl: "https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=300&h=300&fit=crop",
-    styles: ["Reggae"],
-    isVoted: false,
-  },
-  {
-    id: "4",
-    name: "No way bobby no way",
-    rank: 4,
-    votes: 34,
-    imageUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop",
-    styles: ["Psychédélique"],
-    isVoted: false,
-  },
-];
-
-const exampleComments = [
-  {
-    id: "1",
-    username: "@Kazeeee",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    text: "Artiste incroyable ! C'était le feu sur scène, qualité scénique irréprochable, vous avez tout mon soutien !",
-  },
-  {
-    id: "2",
-    username: "@Kazeeee",
-    avatar: "https://i.pravatar.cc/150?img=1",
-    text: "Artiste incroyable ! C'était le feu sur scène, qualité scénique irréprochable, vous avez tout mon soutien !",
-  },
-];
+function getVotingSecondsRemaining(
+  votingTimeRemaining?: number | null,
+  votingEndDate?: string | null
+): number {
+  if (votingTimeRemaining != null && votingTimeRemaining > 0) return votingTimeRemaining;
+  if (votingEndDate) return Math.max(0, Math.floor((new Date(votingEndDate).getTime() - Date.now()) / 1000));
+  return 0;
+}
 
 function formatEventDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -110,10 +41,65 @@ function formatEventDate(dateStr: string): string {
   return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+function formatTimeRange(eventDate: string, endTime?: string | null): string {
+  const start = new Date(eventDate);
+  const startH = start.getHours().toString().padStart(2, "0");
+  const startM = start.getMinutes().toString().padStart(2, "0");
+  if (!endTime) return `${startH}h${startM}`;
+  const end = new Date(endTime);
+  const endH = end.getHours().toString().padStart(2, "0");
+  const endM = end.getMinutes().toString().padStart(2, "0");
+  return `${startH}h${startM} à ${endH}h${endM}`;
+}
+
+function getArtistImage(artist: Artist): string {
+  const profileMedia = artist.media?.find((m) => m.role === "PROFILE" && m.is_primary);
+  return profileMedia ? getMediaUrl(profileMedia) || "" : artist.media_url || "";
+}
+
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
+  const eventId = Number(id);
   const { showModal, setShowModal, guard } = useGuestGuard();
-  const event = exampleEvents[0];
+  const { user } = useAuth();
+  const { event, isLoading, error, fetchEvent } = useEventDetail(eventId);
+  useEffect(() => {
+    fetchEvent();
+  }, [fetchEvent]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#FC5F67" />
+      </View>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error || "Événement introuvable"}</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: "#FC5F67", fontFamily: Fonts.bold }}>Retour</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Artistes triés par votes_count décroissant → rang
+  const sortedArtists = [...(event.artists || [])].sort(
+    (a, b) => (b.votes_count || 0) - (a.votes_count || 0)
+  );
+
+  // Artistes pour lesquels l'user a déjà voté dans cet événement
+  const votedArtistIds = new Set(
+    (event.votes || [])
+      .filter((v) => v.user_id === user?.id)
+      .map((v) => v.artist_id)
+  );
+
+  const isArtist = user?.role === "ARTIST";
+  const isVotingOpen = event.is_voting_open === true;
 
   return (
     <View style={{ flex: 1 }}>
@@ -129,20 +115,27 @@ export default function EventDetailScreen() {
         showsVerticalScrollIndicator={false}
         headerImage={
           <EventHeaderImage
-            imageUrl={event.imageUrl}
-            eventDate={event.eventDate}
-            styles={event.styles}
-            onSharePress={() => guard(() => console.log("Partager l'événement"))}
+            imageUrl={event.image_url || ""}
+            eventDate={event.event_date}
+            styles={event.styles?.map((s) => s.name) || []}
+            onSharePress={() => guard(() => {})}
           />
         }
       >
         <ThemedView style={styles.contentContainer}>
-          {/* Title + Countdown */}
+          {/* Title + Countdown / Vote terminé */}
           <View style={styles.titleRow}>
-            <ThemedText style={styles.eventTitle} numberOfLines={1}>
+            <ThemedText style={styles.eventTitle} numberOfLines={2}>
               {event.title}
             </ThemedText>
-            <VoteCountdown endDate={new Date(event.eventDate)} />
+            {event.is_voting_open ? (
+              <VoteCountdown secondsRemaining={getVotingSecondsRemaining(event.voting_time_remaining, event.voting_end_date)} />
+            ) : event.voting_end_date ? (
+              <View style={styles.voteDoneBadge}>
+                <Clock size={20} color="#000000" />
+                <Text style={styles.voteDoneBadgeText}>Vote terminé</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Event Info */}
@@ -150,19 +143,24 @@ export default function EventDetailScreen() {
             <View style={styles.infoRow}>
               <Calendar size={16} color="#FFFFFF" />
               <Text style={styles.infoText}>
-                {formatEventDate(event.eventDate)}
+                {formatEventDate(event.event_date)}
               </Text>
             </View>
             <View style={styles.infoRow}>
               <Clock size={16} color="#FFFFFF" />
-              <Text style={styles.infoText}>{event.timeRange}</Text>
+              <Text style={styles.infoText}>
+                {formatTimeRange(event.event_date, event.end_time)}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <MapPin size={16} color="#FFFFFF" />
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
           </View>
-          <Pressable
+
+          {/* Bouton Participer — artistes uniquement */}
+          {isArtist && (
+            <Pressable
               onPress={() => guard(() => router.push(`/event/participate/${event.id}`))}
               style={styles.participateButton}
             >
@@ -170,55 +168,64 @@ export default function EventDetailScreen() {
                 Participer à l'événement
               </Text>
             </Pressable>
+          )}
+
           {/* Les participants */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Les participants</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.participantsScroll}
-              style={{ overflow: "visible" }}
-            >
-              {exampleParticipants.map((artist) => (
-                <ArtistVoteCard
-                  key={artist.id}
-                  id={artist.id}
-                  name={artist.name}
-                  rank={artist.rank}
-                  votes={artist.votes}
-                  imageUrl={artist.imageUrl}
-                  styles={artist.styles}
-                  isVoted={artist.isVoted}
-                  onPress={() => guard(() => router.push(`/artist/${artist.id}`))}
-                />
-              ))}
-            </ScrollView>
-          </View>
+          {sortedArtists.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Les participants</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.participantsScroll}
+                style={{ overflow: "visible" }}
+              >
+                {sortedArtists.map((artist, index) => (
+                  <ArtistVoteCard
+                    key={artist.id}
+                    id={String(artist.id)}
+                    name={artist.name}
+                    rank={index + 1}
+                    votes={artist.votes_count || 0}
+                    imageUrl={getArtistImage(artist)}
+                    styles={artist.styles?.map((s) => s.name) || []}
+                    isVoted={votedArtistIds.has(artist.id)}
+                    onPress={() => router.push(`/artist/${artist.id}`)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.buttonsContainer}>
-            <Pressable
-              onPress={() => guard(() => router.push(`/vote/${event.id}`))}
-              style={styles.voteButton}
-            >
-              <Text style={styles.voteButtonText}>
-                Votez pour votre artiste préféré
-              </Text>
-            </Pressable>
+            {isVotingOpen && (
+              <Pressable
+                onPress={() => guard(() => router.push(`/vote/${event.id}`))}
+                style={styles.voteButton}
+              >
+                <Text style={styles.voteButtonText}>
+                  Votez pour votre artiste préféré
+                </Text>
+              </Pressable>
+            )}
 
-            <Pressable
-              onPress={() => guard(() => console.log("Billeterie"))}
-              style={styles.ticketButton}
-            >
-              <Text style={styles.ticketButtonText}>
-                Accéder à la billeterie
-              </Text>
-            </Pressable>
+            {!isVotingOpen && (
+              <Pressable
+                onPress={() => guard(() => router.push(`/ticket/buy/${event.id}`))}
+                style={styles.ticketButton}
+              >
+                <Text style={styles.ticketButtonText}>
+                  Accéder à la billeterie
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {/* À propos de l'événement */}
-          <EventAbout description={event.description} />
-
+          {event.description ? (
+            <EventAbout description={event.description} />
+          ) : null}
         </ThemedView>
       </ParallaxScrollView>
 
@@ -228,6 +235,18 @@ export default function EventDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    backgroundColor: "#111111",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "#FFFFFF",
+    fontFamily: Fonts.bold,
+    textAlign: "center",
+    paddingHorizontal: 24,
+  },
   backButton: {
     position: "absolute",
     top: 60,
@@ -250,7 +269,6 @@ const styles = StyleSheet.create({
     gap: 24,
     backgroundColor: "#111111",
   },
-  // Title + Countdown
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -264,7 +282,6 @@ const styles = StyleSheet.create({
     flex: 1,
     letterSpacing: -0.72,
   },
-  // Event Info
   eventInfoContainer: {
     gap: 6,
   },
@@ -279,7 +296,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: -0.24,
   },
-  // Sections
   sectionContainer: {
     gap: 12,
     overflow: "visible",
@@ -290,13 +306,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.68,
     color: "#FFFFFF",
   },
-  // Participants
   participantsScroll: {
     flexDirection: "row",
     gap: 16,
     paddingTop: 4,
   },
-  // Buttons
   buttonsContainer: {
     gap: 12,
     alignItems: "center",
@@ -316,7 +330,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.56,
   },
   voteButton: {
-    borderWidth: 1,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 15,
     paddingVertical: 12,
@@ -335,15 +348,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 100,
-    alignSelf: "center",
-      width: "100%",
+    width: "100%",
   },
   ticketButtonText: {
     fontFamily: Fonts.extraBold,
     fontSize: 14,
     color: "#000000",
     textAlign: "center",
-
     letterSpacing: -0.56,
-  }
+  },
+  voteDoneBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 30,
+    paddingHorizontal: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+  },
+  voteDoneBadgeText: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: "#000000",
+    letterSpacing: -0.24,
+  },
 });

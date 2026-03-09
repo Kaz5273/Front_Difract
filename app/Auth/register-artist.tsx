@@ -12,6 +12,7 @@ import { StepSubscription } from "@/components/register-artist/StepSubscription"
 import { StepSummary } from "@/components/register-artist/StepSummary";
 import { ProfileCompletionModal } from "@/components/register-artist/ProfileCompletionModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth-store";
 import { MusicStyle } from "@/services/api/types";
 import { stylesService } from "@/services/styles/styles.service";
 import { subscriptionService } from "@/services/subscription/subscription.service";
@@ -79,7 +80,7 @@ export default function RegisterArtistScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const codeInputRefs = useRef<(TextInputType | null)[]>([]);
 
-  const { register, verifyEmail, resendCode, updateUser, user, isLoading, error, clearError } = useAuth();
+  const { register, verifyEmail, resendCode, updateUser, isLoading, error, clearError } = useAuth();
 
   // Charger les styles musicaux au montage
   useEffect(() => {
@@ -189,7 +190,10 @@ export default function RegisterArtistScreen() {
    */
   const handleMediaUploads = async () => {
     try {
-      const newMedia = [...(user?.media || [])];
+      // Lire le user depuis le store directement pour éviter la closure stale
+      // (après verifyEmail, le composant n'a pas encore re-rendu)
+      const currentUser = useAuthStore.getState().user;
+      const newMedia = [...(currentUser?.media || [])];
 
       // Upload photo de profil
       if (data.profilePhoto) {
@@ -221,8 +225,8 @@ export default function RegisterArtistScreen() {
       }
 
       // Mettre à jour le user dans le store avec les médias uploadés
-      if (user) {
-        updateUser({ ...user, media: newMedia });
+      if (currentUser) {
+        updateUser({ ...currentUser, media: newMedia });
       }
     } catch (err) {
       console.warn("⚠️ Media upload failed (non-blocking):", err);

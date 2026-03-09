@@ -21,7 +21,7 @@ interface VoteSectionProps {
   eventDate: string;
   location: string;
   distance?: string;
-  endDate: Date;
+  secondsRemaining: number;
   artists: VotingArtist[];
   onArtistPress?: (artist: VotingArtist) => void;
 }
@@ -31,7 +31,7 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
   eventDate,
   location,
   distance,
-  endDate,
+  secondsRemaining,
   artists,
   onArtistPress,
 }) => {
@@ -42,7 +42,7 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
         <Text style={styles.eventName} numberOfLines={1}>
           {eventName}
         </Text>
-        <VoteCountdown endDate={endDate} />
+        <VoteCountdown secondsRemaining={secondsRemaining} />
       </View>
 
       {/* Info Card - date + location in single blur card */}

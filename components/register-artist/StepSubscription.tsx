@@ -62,6 +62,7 @@ const PLANS: Record<
     features: [
       "Ajouter une musique sur votre compte",
       "Participer \u00e0 3 \u00e9v\u00e9nements par an",
+      "Ajouter des liens vers vos r\u00e9seaux sociaux",
     ],
     price: "4,99\u20ac / mois",
     apiPlan: "standard",

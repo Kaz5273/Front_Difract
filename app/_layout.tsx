@@ -100,6 +100,12 @@ export default function RootLayout() {
             <Stack.Screen name="Auth/register-artist" options={{ gestureEnabled: false }} />
             <Stack.Screen name="Auth/artist-subscribe" options={{ gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="ticket/buy/[id]" />
+            <Stack.Screen
+              name="ticket/[id]"
+              options={{ presentation: "modal", gestureEnabled: true }}
+            />
+            <Stack.Screen name="ticket/confirm/[id]" options={{ gestureEnabled: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

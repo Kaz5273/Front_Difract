@@ -17,6 +17,7 @@ export const ENDPOINTS = {
   // Events
   EVENTS: '/api/events',
   EVENTS_UPCOMING: '/api/events/upcoming',
+  EVENTS_PAST: '/api/events/past',
   EVENT_BY_ID: (id: string | number) => `/api/events/${id}`,
   EVENT_ARTISTS: (eventId: string | number) => `/api/events/${eventId}/artists`,
   EVENT_FRIENDS_GOING: (eventId: string | number) => `/api/events/${eventId}/friends-going`,
@@ -66,6 +67,11 @@ export const ENDPOINTS = {
 
   // Location
   ME_LOCATION: '/api/me/location',
+
+  // Tickets
+  ME_TICKETS: '/api/me/tickets',
+  ME_TICKET: (id: string | number) => `/api/me/tickets/${id}`,
+  TICKETS_SCAN: (qrCode: string) => `/api/tickets/${qrCode}/scan`,
 
   // Subscription
   SUBSCRIPTION_CHECKOUT: '/api/subscription/checkout',

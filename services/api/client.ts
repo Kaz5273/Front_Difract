@@ -74,6 +74,7 @@ apiClient.interceptors.response.use(
         url: error.config?.url,
         status,
         message: error.message,
+        data: error.response?.data,
       });
     }
     

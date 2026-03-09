@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -18,107 +19,90 @@ import { BlurView } from "expo-blur";
 import { Fonts } from "@/constants/theme";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
+import { useEventDetail } from "@/hooks/use-events";
 import { VoteCountdown } from "@/components/Vote/VoteCountdown";
 import {
   VoteArtistCarousel,
   CarouselArtist,
 } from "@/components/Vote/VoteArtistCarousel";
 import { VoteTrackPlayer } from "@/components/Vote/VoteTrackPlayer";
-
-// Musiques locales de test — à remplacer par l'API
-const TRACK_BAKERSFIELD = require("@/musiqueTest/1 BAKERSFIELD.wav");
-const TRACK_LIFE_IS_COOL = require("@/musiqueTest/6-LIFE-IS-COOL.mp3");
-
-// Données mock — à remplacer par l'API
-const mockArtists: CarouselArtist[] = [
-  {
-    id: "1",
-    name: "Choi",
-    votes: 124,
-    rank: 1,
-    imageUrl:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
-    styles: ["Techno", "House", "Minimal", "Ambient", "Electro", "Trance"],
-    track: { title: "Bakersfield", duration: "4:34" },
-  },
-  {
-    id: "2",
-    name: "Luna",
-    votes: 156,
-    rank: 2,
-    imageUrl:
-      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=600&fit=crop",
-    styles: ["Jazz", "Soul", "R&B"],
-    track: { title: "Life is cool", duration: "4:12" },
-  },
-  {
-    id: "3",
-    name: "Nova",
-    votes: 98,
-    rank: 3,
-    imageUrl:
-      "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=600&fit=crop",
-    styles: ["Electronic", "House"],
-    track: { title: "Bakersfield", duration: "3:30" },
-  },
-  {
-    id: "4",
-    name: "Echo",
-    votes: 76,
-    rank: 4,
-    imageUrl:
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=600&fit=crop",
-    styles: ["Rock", "Alternative"],
-    track: { title: "Life is cool", duration: "4:01" },
-  },
-];
-
+import { getMediaUrl } from "@/services/api/client";
+import { votesService } from "@/services/votes/votes.service";
+import { useAuthStore } from "@/store/auth-store";
+import type { Vote } from "@/services/api/types";
 
 export default function VoteDetailScreen() {
   const { id } = useLocalSearchParams();
+  const eventId = Number(id);
+  const userId = useAuthStore((s) => s.user?.id);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  const { event, isLoading, error, fetchEvent } = useEventDetail(eventId);
+  useEffect(() => { fetchEvent(); }, [fetchEvent]);
+
+  const [existingVote, setExistingVote] = useState<Vote | null>(null);
+
+  // Check if user already voted for this event
+  useEffect(() => {
+    if (!isAuthenticated || !userId || !eventId) return;
+    votesService.checkVoted(userId, eventId)
+      .then(setExistingVote)
+      .catch(() => {});
+  }, [isAuthenticated, userId, eventId]);
 
   const { showModal, setShowModal, guard } = useGuestGuard();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [playingArtistId, setPlayingArtistId] = useState<string | null>(null);
 
-  // One player per unique audio source
-  const playerBakersfield = useExpoAudioPlayer(TRACK_BAKERSFIELD);
-  const playerLifeIsCool = useExpoAudioPlayer(TRACK_LIFE_IS_COOL);
+  // Single audio player — source replaced on artist change
+  const player = useExpoAudioPlayer(null);
 
-  const players: Record<string, ReturnType<typeof useExpoAudioPlayer>> = useMemo(
-    () => ({
-      "1": playerBakersfield,
-      "2": playerLifeIsCool,
-      "3": playerBakersfield,
-      "4": playerLifeIsCool,
-    }),
-    [playerBakersfield, playerLifeIsCool]
-  );
-
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedArtistIdRef = useRef<string | null>(null);
-  const activePlayerRef = useRef<ReturnType<typeof useExpoAudioPlayer> | null>(null);
 
-  const currentArtist = mockArtists[currentIndex];
+  // Derive CarouselArtist list from event artists (sorted by votes desc)
+  const carouselArtists = useMemo((): CarouselArtist[] => {
+    if (!event?.artists?.length) return [];
 
-  // Date de fin des votes (mock)
-  const voteEndDate = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 1);
-    date.setHours(date.getHours() + 3);
-    date.setMinutes(date.getMinutes() + 39);
-    return date;
-  }, []);
+    const sorted = [...event.artists].sort(
+      (a, b) => (b.votes_count ?? 0) - (a.votes_count ?? 0)
+    );
 
-  // Get the player for a given artist
-  const getPlayer = useCallback(
-    (artistId: string) => players[artistId] ?? playerBakersfield,
-    [players, playerBakersfield]
-  );
+    return sorted.map((artist, index) => {
+      const profileMedia = artist.media?.find(
+        (m) => m.role === "PROFILE" && m.is_primary
+      );
+      const imageUrl =
+        (profileMedia ? getMediaUrl(profileMedia) : null) ||
+        artist.media_url ||
+        "";
+
+      const trackMedia = artist.media?.find((m) => m.role === "TRACK");
+      const trackTitle =
+        trackMedia?.title ||
+        trackMedia?.path?.split("/").pop()?.replace(/\.[^.]+$/, "") ||
+        "Track";
+      const trackUrl = trackMedia ? getMediaUrl(trackMedia) : null;
+
+      const styles = artist.styles?.map((s) => s.name) ?? [];
+
+      return {
+        id: String(artist.id),
+        name: artist.name,
+        votes: artist.votes_count ?? 0,
+        rank: index + 1,
+        imageUrl,
+        styles,
+        track: { title: trackTitle, duration: "" },
+        trackUrl,
+      };
+    });
+  }, [event?.artists]);
+
+  const currentArtist = carouselArtists[currentIndex];
+  const votingSecondsRemaining = event?.voting_time_remaining ?? 0;
 
   const stopProgressTracking = useCallback(() => {
     if (progressIntervalRef.current) {
@@ -130,22 +114,19 @@ export default function VoteDetailScreen() {
   const startProgressTracking = useCallback(() => {
     stopProgressTracking();
     progressIntervalRef.current = setInterval(() => {
-      const p = activePlayerRef.current;
-      if (!p || p.duration <= 0) return;
-
-      const currentProgress = p.currentTime / p.duration;
+      if (player.duration <= 0) return;
+      const currentProgress = player.currentTime / player.duration;
       setProgress(currentProgress);
 
-      if (!p.playing && p.currentTime >= p.duration - 0.1) {
+      if (!player.playing && player.currentTime >= player.duration - 0.1) {
         setPlayingArtistId(null);
         setProgress(0);
-        p.seekTo(0);
+        player.seekTo(0);
         stopProgressTracking();
       }
     }, 250);
-  }, [stopProgressTracking]);
+  }, [player, stopProgressTracking]);
 
-  // Cancel any pending play timer
   const cancelPlayTimer = useCallback(() => {
     if (playTimerRef.current) {
       clearTimeout(playTimerRef.current);
@@ -153,112 +134,130 @@ export default function VoteDetailScreen() {
     }
   }, []);
 
-  // Stop the currently active player
-  const stopActivePlayer = useCallback(() => {
-    if (activePlayerRef.current) {
-      try {
-        activePlayerRef.current.pause();
-        activePlayerRef.current.seekTo(0);
-      } catch (_) {}
-    }
-  }, []);
-
-  // Central function: transition to a given artist's track
+  // Central function: switch to an artist's track
   const transitionTo = useCallback(
     (artistId: string) => {
       cancelPlayTimer();
       stopProgressTracking();
-      stopActivePlayer();
+      try {
+        player.pause();
+        player.seekTo(0);
+      } catch (_) {}
 
-      const nextPlayer = getPlayer(artistId);
-      activePlayerRef.current = nextPlayer;
+      const artist = carouselArtists.find((a) => a.id === artistId);
+      if (!artist?.trackUrl) return;
+
       loadedArtistIdRef.current = artistId;
       setPlayingArtistId(artistId);
       setProgress(0);
-      nextPlayer.seekTo(0);
+
+      player.replace({ uri: artist.trackUrl });
       playTimerRef.current = setTimeout(() => {
-        nextPlayer.play();
+        player.play();
         startProgressTracking();
       }, 50);
     },
-    [getPlayer, cancelPlayTimer, stopProgressTracking, stopActivePlayer, startProgressTracking]
+    [player, carouselArtists, cancelPlayTimer, stopProgressTracking, startProgressTracking]
   );
 
-  // Cleanup all timers + stop player on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       cancelPlayTimer();
       stopProgressTracking();
-      stopActivePlayer();
+      try { player.pause(); } catch (_) {}
     };
-  }, [cancelPlayTimer, stopProgressTracking, stopActivePlayer]);
+  }, [cancelPlayTimer, stopProgressTracking, player]);
 
   const handlePlayPress = useCallback(
     (artistId: string) => {
-      const p = getPlayer(artistId);
-
-      // Same artist: toggle play/pause
-      if (loadedArtistIdRef.current === artistId && activePlayerRef.current === p) {
-        if (p.playing) {
-          p.pause();
+      // Same artist: toggle
+      if (loadedArtistIdRef.current === artistId) {
+        if (player.playing) {
+          player.pause();
           setPlayingArtistId(null);
           stopProgressTracking();
         } else {
-          p.play();
+          player.play();
           setPlayingArtistId(artistId);
           startProgressTracking();
         }
         return;
       }
-
-      // Different artist: transition
       transitionTo(artistId);
     },
-    [getPlayer, transitionTo, startProgressTracking, stopProgressTracking]
+    [player, transitionTo, startProgressTracking, stopProgressTracking]
   );
 
-  // When scroll settles: play the landed-on artist (only if authenticated)
+  // Auto-play when scroll settles
   const handleScrollEnd = useCallback(
     (index: number) => {
-      const artist = mockArtists[index];
+      const artist = carouselArtists[index];
       if (!artist) return;
       guard(() => transitionTo(artist.id));
     },
-    [transitionTo, guard]
+    [carouselArtists, transitionTo, guard]
   );
 
   const handleSeek = useCallback(
     (ratio: number) => {
-      const p = activePlayerRef.current;
-      if (p && p.duration > 0) {
-        p.seekTo(ratio * p.duration);
+      if (player.duration > 0) {
+        player.seekTo(ratio * player.duration);
         setProgress(ratio);
       }
     },
-    []
+    [player]
   );
 
   const handleVote = useCallback(() => {
-    router.push(`/vote/confirm/${id}`);
-  }, [id]);
+    if (!currentArtist) return;
+    router.push(`/vote/confirm/${id}?artistId=${currentArtist.id}`);
+  }, [id, currentArtist]);
 
   const handleViewProfile = useCallback(() => {
+    if (!currentArtist) return;
     router.push(`/artist/${currentArtist.id}`);
   }, [currentArtist]);
 
-  // Format current playback time
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const activePlayer = activePlayerRef.current;
-  const activeDuration = activePlayer?.duration ?? 0;
-  const currentTimeStr =
-    activeDuration > 0 ? formatTime(progress * activeDuration) : "0:00";
-  const durationStr =
-    activeDuration > 0 ? formatTime(activeDuration) : "0:00";
+  // Re-vote allowed after 7 days
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const canRevote = existingVote
+    ? Date.now() - new Date(existingVote.created_at).getTime() >= ONE_WEEK_MS
+    : false;
+  const daysRemaining = existingVote && !canRevote
+    ? Math.ceil((ONE_WEEK_MS - (Date.now() - new Date(existingVote.created_at).getTime())) / (24 * 60 * 60 * 1000))
+    : 0;
+
+  const activeDuration = player.duration ?? 0;
+  const currentTimeStr = activeDuration > 0 ? formatTime(progress * activeDuration) : "0:00";
+  const durationStr = activeDuration > 0 ? formatTime(activeDuration) : "0:00";
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#FC5F67" style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error || "Événement introuvable"}</Text>
+          <Pressable onPress={() => router.back()} style={styles.voteButton}>
+            <Text style={styles.voteButtonText}>Retour</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -275,72 +274,97 @@ export default function VoteDetailScreen() {
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              Espace rencontre
+              {event.title}
             </Text>
-            <Text style={styles.headerSubtitle}>En savoir plus</Text>
+            <Pressable onPress={() => router.push(`/event/${id}`)}>
+              <Text style={styles.headerSubtitle}>En savoir plus</Text>
+            </Pressable>
           </View>
-
-          <Pressable style={styles.headerButtonRight}>
-            <EllipsisVertical size={20} color="#FFFFFF" />
-          </Pressable>
         </View>
 
         {/* Countdown row */}
         <View style={styles.countdownRow}>
           <Text style={styles.countdownLabel}>Fin des votes :</Text>
-          <VoteCountdown endDate={voteEndDate} />
+          <VoteCountdown secondsRemaining={votingSecondsRemaining} />
         </View>
 
         {/* Carousel Section: Rank + Carousel + Player */}
-        <View style={styles.carouselSection}>
-          {/* Rank pill + Sort button */}
-          <View style={styles.rankRow}>
-            <View style={styles.rankSpacer} />
+        {carouselArtists.length > 0 && currentArtist ? (
+          <View style={styles.carouselSection}>
+            {/* Rank pill + Sort button */}
+            <View style={styles.rankRow}>
+              <View style={styles.rankSpacer} />
 
-            <BlurView intensity={7} tint="dark" style={styles.rankPill}>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankText}>#{currentArtist.rank}</Text>
-              </View>
-              <Text style={styles.rankVotes}>
-                {currentArtist.votes} votes
-              </Text>
-            </BlurView>
+              <BlurView intensity={7} tint="dark" style={styles.rankPill}>
+                <View style={styles.rankBadge}>
+                  <Text style={styles.rankText}>#{currentArtist.rank}</Text>
+                </View>
+                <Text style={styles.rankVotes}>
+                  {currentArtist.votes} votes
+                </Text>
+              </BlurView>
 
-            <Pressable style={styles.sortButton}>
-              <ArrowDownUp size={20} color="#FFFFFF" />
-            </Pressable>
-          </View>
+              <Pressable style={styles.sortButton}>
+                <ArrowDownUp size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
 
-          {/* Artist Carousel */}
-          <VoteArtistCarousel
-            artists={mockArtists}
-            currentIndex={currentIndex}
-            onIndexChange={setCurrentIndex}
-            onScrollEnd={handleScrollEnd}
-            playingArtistId={playingArtistId}
-            onPlayPress={(artistId: string) => guard(() => handlePlayPress(artistId))}
-          />
-
-          {/* Track Player */}
-          <View style={styles.trackPlayerContainer}>
-            <VoteTrackPlayer
-              currentTime={currentTimeStr}
-              duration={durationStr}
-              progress={progress}
-              onSeek={handleSeek}
+            {/* Artist Carousel */}
+            <VoteArtistCarousel
+              artists={carouselArtists}
+              currentIndex={currentIndex}
+              onIndexChange={setCurrentIndex}
+              onScrollEnd={handleScrollEnd}
+              playingArtistId={playingArtistId}
+              onPlayPress={(artistId: string) => guard(() => handlePlayPress(artistId))}
             />
+
+            {/* Track Player */}
+            <View style={styles.trackPlayerContainer}>
+              <VoteTrackPlayer
+                currentTime={currentTimeStr}
+                duration={durationStr}
+                progress={progress}
+                onSeek={handleSeek}
+              />
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucun artiste inscrit pour cet événement</Text>
+          </View>
+        )}
 
         {/* Action Buttons */}
-        <View style={styles.buttonsContainer}>
-          <Pressable onPress={() => guard(handleVote)} style={styles.voteButton}>
-            <Text style={styles.voteButtonText}>Votez</Text>
-          </Pressable>
-          <Pressable onPress={handleViewProfile} style={styles.profileButton}>
-            <Text style={styles.profileButtonText}>Voir le profil</Text>
-          </Pressable>
-        </View>
+        {currentArtist && (
+          <View style={styles.buttonsContainer}>
+            {existingVote && !canRevote ? (
+              <View style={styles.alreadyVotedBanner}>
+                <Text style={styles.alreadyVotedText}>
+                  Vous avez voté pour{" "}
+                  <Text style={styles.alreadyVotedName}>
+                    {carouselArtists.find((a) => a.id === String(existingVote.artist_id))?.name ?? "un artiste"}
+                  </Text>
+                </Text>
+                <Text style={styles.alreadyVotedSub}>
+                  Vous pourrez changer dans{" "}
+                  <Text style={styles.alreadyVotedName}>
+                    {daysRemaining} jour{daysRemaining > 1 ? "s" : ""}
+                  </Text>
+                </Text>
+              </View>
+            ) : (
+              <Pressable onPress={() => guard(handleVote)} style={styles.voteButton}>
+                <Text style={styles.voteButtonText}>
+                  {canRevote ? "Changer mon vote" : "Votez"}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable onPress={handleViewProfile} style={styles.profileButton}>
+              <Text style={styles.profileButtonText}>Voir le profil</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
@@ -366,10 +390,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     height: 44,
-    
   },
   headerButton: {
     width: 44,
@@ -378,20 +400,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#212121",
     justifyContent: "center",
     alignItems: "center",
-    paddingRight: 2, // Visual centering for the left chevron
-  },
-  headerButtonRight: {
-     width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#212121",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingRight: 2,
   },
   headerCenter: {
-    flex: 1,
+    position: "absolute",
+    left: 0,
+    right: 0,
     alignItems: "center",
-
   },
   headerTitle: {
     fontFamily: Fonts.regular,
@@ -471,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Carousel section (rank + carousel + player)
+  // Carousel section
   carouselSection: {
     gap: 16,
     alignItems: "center",
@@ -518,5 +533,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#FFFFFF",
     letterSpacing: -0.28,
+  },
+
+  // States
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+    padding: 24,
+  },
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: "#848484",
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: "#848484",
+    textAlign: "center",
+  },
+  alreadyVotedBanner: {
+    backgroundColor: "#1D1C1B",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  alreadyVotedText: {
+    fontFamily: Fonts.bold,
+    fontSize: 14,
+    color: "#848484",
+    letterSpacing: -0.28,
+    textAlign: "center",
+  },
+  alreadyVotedSub: {
+    fontFamily: Fonts.bold,
+    fontSize: 12,
+    color: "#848484",
+    letterSpacing: -0.24,
+    marginTop: 2,
+  },
+  alreadyVotedName: {
+    fontFamily: Fonts.regular,
+    color: "#FFFFFF",
   },
 });
