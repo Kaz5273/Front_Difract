@@ -57,7 +57,7 @@ export default function VoteConfirmScreen() {
 
   const handleSuccessClose = () => {
     setShowSuccess(false);
-    router.replace(`/event/${id}`);
+    router.back();
   };
 
   const profileMedia = artist?.media?.find((m) => m.role === "PROFILE" && m.is_primary);

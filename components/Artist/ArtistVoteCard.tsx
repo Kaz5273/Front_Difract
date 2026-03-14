@@ -7,6 +7,7 @@ import {
   Pressable,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import { User } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 import { StyleBadges } from "@/components/Badges/StyleBadges";
 
@@ -14,7 +15,7 @@ interface ArtistVoteCardProps {
   id: string;
   name: string;
   rank: number;
-  votes: number;
+  votes?: number;
   imageUrl: string;
   styles: string[];
   isVoted?: boolean;
@@ -41,22 +42,37 @@ export const ArtistVoteCard: React.FC<ArtistVoteCardProps> = ({
 
       {/* Image Card */}
       <View style={[cardStyles.imageCard, isVoted && cardStyles.imageCardVoted]}>
-        <ImageBackground
-          source={{ uri: imageUrl }}
-          style={cardStyles.imageBackground}
-          imageStyle={cardStyles.image}
-        >
-          <View style={cardStyles.content}>
-            <StyleBadges styles={musicStyles} maxVisible={1} />
-            {isVoted && (
-              <View style={cardStyles.votedBadgeContainer}>
-                <View style={cardStyles.votedBadge}>
-                  <Text style={cardStyles.votedBadgeText}>Vous avez voté !</Text>
+        {imageUrl ? (
+          <ImageBackground
+            source={{ uri: imageUrl }}
+            style={cardStyles.imageBackground}
+            imageStyle={cardStyles.image}
+          >
+            <View style={cardStyles.content}>
+              <StyleBadges styles={musicStyles} maxVisible={1} />
+              {isVoted && (
+                <View style={cardStyles.votedBadgeContainer}>
+                  <View style={cardStyles.votedBadge}>
+                    <Text style={cardStyles.votedBadgeText}>Vous avez voté !</Text>
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
+            </View>
+          </ImageBackground>
+        ) : (
+          <View style={cardStyles.placeholder}>
+            <User size={40} color="rgba(255,255,255,0.2)" />
+            <View style={cardStyles.content}>
+              {isVoted && (
+                <View style={cardStyles.votedBadgeContainer}>
+                  <View style={cardStyles.votedBadge}>
+                    <Text style={cardStyles.votedBadgeText}>Vous avez voté !</Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </View>
-        </ImageBackground>
+        )}
       </View>
 
       {/* Rank + Votes Pill */}
@@ -64,7 +80,9 @@ export const ArtistVoteCard: React.FC<ArtistVoteCardProps> = ({
         <View style={cardStyles.rankBadge}>
           <Text style={cardStyles.rankText}>#{rank}</Text>
         </View>
-        <Text style={cardStyles.votesText}>{votes} votes</Text>
+        {votes !== undefined && (
+          <Text style={cardStyles.votesText}>{votes} votes</Text>
+        )}
       </BlurView>
     </Pressable>
   );
@@ -100,6 +118,13 @@ const cardStyles = StyleSheet.create({
   },
   image: {
     borderRadius: 18,
+  },
+  placeholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#2A2A2A",
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,

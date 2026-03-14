@@ -58,6 +58,8 @@ interface EventCardProps {
   votingEndDate?: string | null;
   friendsGoing?: number;
   friendsAvatars?: string[];
+  purchasedTier?: TicketTier;
+  purchasedPrice?: number;
   onPress?: () => void;
 }
 
@@ -73,10 +75,13 @@ export const EventCard: React.FC<EventCardProps> = ({
   isVotingOpen = true,
   votingEndDate,
   friendsAvatars = [],
+  purchasedTier,
+  purchasedPrice,
   onPress,
 }) => {
-  const activeSale =
-    !isVotingOpen ? getActiveTicketSale(votingEndDate, eventDate) : null;
+  const activeSale = purchasedTier
+    ? { tier: purchasedTier, price: purchasedPrice ?? 0 }
+    : !isVotingOpen ? getActiveTicketSale(votingEndDate, eventDate) : null;
   const formatShortDate = (dateString: string) => {
     const date = new Date(dateString);
     const dayNum = date.getDate();
@@ -129,8 +134,8 @@ export const EventCard: React.FC<EventCardProps> = ({
               <Text style={styles.datePillText}>{formatShortDate(eventDate)}</Text>
             </BlurView>
 
-            {/* Style pills */}
-            <StyleBadges styles={musicStyles} maxVisible={2} />
+            {/* Style pills — 1 badge max + "+N" pour éviter le débordement */}
+            <StyleBadges styles={musicStyles} maxVisible={1} />
           </View>
 
           {/* Bottom info section */}

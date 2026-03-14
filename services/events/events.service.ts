@@ -2,6 +2,9 @@ import { apiClient } from '../api/client';
 import { Event, Artist } from '../api/types';
 import { ENDPOINTS } from '../api/endpoints';
 
+const EVENT_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const eventCache = new Map<number, { data: Event; expiresAt: number }>();
+
 export interface EventFilters {
   q?: string;
   style_id?: number;
@@ -47,7 +50,12 @@ export const eventService = {
   },
 
   getById: async (id: number): Promise<Event> => {
+    const cached = eventCache.get(id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
     const response = await apiClient.get<Event>(ENDPOINTS.EVENT_BY_ID(id));
+    eventCache.set(id, { data: response.data, expiresAt: Date.now() + EVENT_CACHE_TTL });
     return response.data;
   },
 

@@ -17,6 +17,10 @@ import { useVotes } from "@/hooks/use-votes";
 import { useAuthStore } from "@/store/auth-store";
 import { useLocationStore } from "@/store/location-store";
 import { LocationSearchModal } from "@/components/Modals/LocationSearchModal";
+import { locationService } from "@/services/location/location.service";
+import { FaqSection } from "@/components/FaqSection";
+import { haversineKm } from "@/utils/distance";
+import { getMediaUrl } from "@/services/api/client";
 
 function formatEventDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -31,27 +35,80 @@ export default function VoteScreen() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [activeQuickFilter, setActiveQuickFilter] = useState<QuickFilter | null>(null);
   const [quickFilterLabel, setQuickFilterLabel] = useState<string | undefined>(undefined);
+  const [dateFilterRange, setDateFilterRange] = useState<{ start: Date; end: Date } | null>(null);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const { city: displayCity, setCity } = useLocationStore();
+  const { city: displayCity, isManualCity, manualCoords, setCity, setManualCity, clearCity } = useLocationStore();
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const { groupedByEvent, isLoading, error, fetchMyVotes } = useVotes();
+  const filter = activeTab === "first" ? "active" : "done";
+  const { groupedByEvent, isLoading, error, fetchMyVotes } = useVotes(filter);
+  const [locallyExpiredIds, setLocallyExpiredIds] = useState<Set<number>>(new Set());
+  const [sortAsc, setSortAsc] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchMyVotes();
+    if (isManualCity && manualCoords) {
+      setUserCoords(manualCoords);
+      return;
     }
-  }, [isAuthenticated]);
+    locationService.getCachedLocation().then((coords) => {
+      if (coords) setUserCoords(coords);
+    });
+  }, [isManualCity, manualCoords]);
+
+  const getDistance = (lat?: number | null, lon?: number | null): string | undefined => {
+    if (!userCoords || lat == null || lon == null) return undefined;
+    const km = haversineKm(userCoords.latitude, userCoords.longitude, lat, lon);
+    return Math.round(km) > 0 ? `${Math.round(km)} km` : undefined;
+  };
+
+  const handleClearLocation = async () => {
+    const coords = await locationService.getCachedLocation() ?? await locationService.getCurrentPosition();
+    if (coords) {
+      const gpsCity = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      setCity(gpsCity ?? "");
+      setUserCoords(coords);
+    } else {
+      clearCity();
+      setUserCoords(null);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) fetchMyVotes();
+  }, [isAuthenticated, filter]);
 
   // Filtrer par onglet
-  // "Vote en cours" : event PUBLISHED (vote ouvert ou non encore terminé)
-  // "Vote terminé"  : event DONE
+  // "Vote en cours" : event PUBLISHED avec timer actif
+  // "Vote terminé"  : event DONE, timer expiré (voting_end_date passée), ou expiré localement
   const filteredEvents = groupedByEvent.filter((group) => {
-    const { status } = group.event;
-    if (activeTab === "first") {
-      return status === "PUBLISHED";
+    const { status, voting_end_date, voting_time_remaining } = group.event;
+    const secondsLeft = voting_time_remaining != null && voting_time_remaining > 0
+      ? voting_time_remaining
+      : voting_end_date
+      ? Math.max(0, Math.floor((new Date(voting_end_date).getTime() - Date.now()) / 1000))
+      : 0;
+    const isEnded = status === "DONE" || secondsLeft <= 0 || locallyExpiredIds.has(group.event.id);
+    if (activeTab === "first" ? isEnded : !isEnded) return false;
+
+    // Date filter
+    const eventDate = new Date(group.event.event_date);
+    if (selectedDate) {
+      const d = selectedDate;
+      if (
+        eventDate.getFullYear() !== d.getFullYear() ||
+        eventDate.getMonth() !== d.getMonth() ||
+        eventDate.getDate() !== d.getDate()
+      ) return false;
+    } else if (dateFilterRange) {
+      if (eventDate < dateFilterRange.start || eventDate > dateFilterRange.end) return false;
     }
-    return status === "DONE";
+
+    return true;
+  }).sort((a, b) => {
+    const dateA = new Date(a.event.event_date).getTime();
+    const dateB = new Date(b.event.event_date).getTime();
+    return sortAsc ? dateA - dateB : dateB - dateA;
   });
 
   return (
@@ -67,6 +124,7 @@ export default function VoteScreen() {
           <LocationBadge
             location={displayCity}
             onPress={() => guard(() => setShowLocationModal(true))}
+            onClear={isManualCity ? handleClearLocation : undefined}
           />
           <CalendarBadge
             onPress={() => guard(() => setCalendarVisible(true))}
@@ -76,12 +134,13 @@ export default function VoteScreen() {
               setSelectedDate(undefined);
               setActiveQuickFilter(null);
               setQuickFilterLabel(undefined);
+              setDateFilterRange(null);
             }}
           />
           <FilterBadge onPress={() => guard(() => console.log("Open filters"))} />
           <Pressable
             style={styles.sortButton}
-            onPress={() => guard(() => console.log("Sort"))}
+            onPress={() => guard(() => setSortAsc((prev) => !prev))}
           >
             <ArrowDownUp size={20} color="#FFFFFF" />
             <Text style={styles.sortText}>Trier</Text>
@@ -97,11 +156,13 @@ export default function VoteScreen() {
             setSelectedDate(date);
             setActiveQuickFilter(null);
             setQuickFilterLabel(undefined);
+            setDateFilterRange(null);
           }}
-          onSelectQuickFilter={(type, label) => {
+          onSelectQuickFilter={(type, label, start, end) => {
             setActiveQuickFilter(type);
             setQuickFilterLabel(label);
             setSelectedDate(undefined);
+            setDateFilterRange({ start, end });
           }}
         />
 
@@ -157,56 +218,75 @@ export default function VoteScreen() {
                 : "Vous n'avez aucun vote terminé\npour le moment"}
             </Text>
             <Text style={styles.emptySubtitle}>
-              {activeTab === "first"
-                ? "Rendez-vous dans la section event\npour voter pour une event !"
-                : "Rendez-vous dans la section event\npour voter pour une event !"}
+              Découvrez les événements et votez\npour vos artistes préférés !
             </Text>
+            <Pressable
+              style={styles.ctaButton}
+              onPress={() => router.push("/(tabs)/events")}
+            >
+              <Text style={styles.ctaText}>Voir les événements</Text>
+            </Pressable>
           </View>
         )}
 
         {/* Vote Sections */}
-        {isAuthenticated &&
-          !isLoading &&
-          !error &&
-          filteredEvents.map((group) => (
-            <VoteSection
-              key={group.event.id}
-              eventName={group.event.title}
-              eventDate={formatEventDate(group.event.event_date)}
-              location={group.event.location}
-              secondsRemaining={
-                group.event.voting_time_remaining != null && group.event.voting_time_remaining > 0
-                  ? group.event.voting_time_remaining
-                  : group.event.voting_end_date
-                  ? Math.max(0, Math.floor((new Date(group.event.voting_end_date).getTime() - Date.now()) / 1000))
-                  : 0
-              }
-              artists={group.artists.map((artist, index) => ({
-                id: String(artist.id),
-                name: artist.name,
-                rank: index + 1,
-                votes: 0,
-                imageUrl: artist.media_url || "",
-                styles: [],
-                isVoted: true,
-              }))}
-              onArtistPress={() => router.push(`/vote/${group.event.id}`)}
-            />
-          ))}
+        {isAuthenticated && !isLoading && !error && filteredEvents.length > 0 && (
+          <View style={styles.votesContainer}>
+            {filteredEvents.map((group) => (
+              <VoteSection
+                key={group.event.id}
+                eventName={group.event.title}
+                eventDate={formatEventDate(group.event.event_date)}
+                location={group.event.location}
+                distance={getDistance(group.event.latitude, group.event.longitude)}
+                secondsRemaining={
+                  group.event.voting_time_remaining != null && group.event.voting_time_remaining > 0
+                    ? group.event.voting_time_remaining
+                    : group.event.voting_end_date
+                    ? Math.max(0, Math.floor((new Date(group.event.voting_end_date).getTime() - Date.now()) / 1000))
+                    : 0
+                }
+                artists={(() => {
+                    const ranked = [...group.artists]
+                      .sort((a, b) => (b.votes_count ?? 0) - (a.votes_count ?? 0))
+                      .map((artist, index) => {
+                        const profileMedia = artist.media?.find((m) => m.role === "PROFILE" && m.is_primary)
+                          || artist.media?.find((m) => m.role === "PROFILE");
+                        const imageUrl = profileMedia ? getMediaUrl(profileMedia) || "" : artist.media_url || "";
+                        return {
+                          id: String(artist.id),
+                          name: artist.name,
+                          rank: index + 1,
+                          votes: artist.votes_count,
+                          imageUrl,
+                          styles: artist.styles?.map((s) => s.name) || [],
+                          isVoted: artist.isVoted,
+                        };
+                      });
+                    const votedIndex = ranked.findIndex((a) => a.isVoted);
+                    if (votedIndex > 0) {
+                      const [voted] = ranked.splice(votedIndex, 1);
+                      ranked.unshift(voted);
+                    }
+                    return ranked;
+                  })()}
+                onInfoPress={() => router.push(`/event/${group.event.id}`)}
+                onArtistPress={() => router.push(`/vote/${group.event.id}`)}
+                onExpire={() =>
+                  setLocallyExpiredIds((prev) => new Set([...prev, group.event.id]))
+                }
+              />
+            ))}
+          </View>
+        )}
 
-        {/* FAQ Section */}
-        <View style={styles.faqSection}>
-          <Text style={styles.faqText}>
-            Vous ne trouvez pas votre bonheur ? Des questions ?
-          </Text>
-          <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
-        </View>
+        <FaqSection />
       </ScrollView>
 
       <LocationSearchModal
         visible={showLocationModal}
         onClose={() => setShowLocationModal(false)}
-        onSelectLocation={(city) => { setCity(city); setShowLocationModal(false); }}
+        onSelectLocation={(city, coords) => { setManualCity(city, coords); setUserCoords(coords); setShowLocationModal(false); }}
       />
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
@@ -250,12 +330,17 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     letterSpacing: -0.24,
   },
+  votesContainer: {
+    marginTop: 32,
+    gap: 16,
+  },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
     gap: 16,
+    marginTop: 32,
   },
   emptyText: {
     fontFamily: Fonts.bold,

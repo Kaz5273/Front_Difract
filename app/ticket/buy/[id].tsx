@@ -37,8 +37,16 @@ export default function BuyTicketScreen() {
     Promise.all([
       eventService.getById(eventId),
       eventService.getTicketPrice(eventId),
+      ticketsService.getMyTickets().catch(() => [] as import("@/services/api/types").Ticket[]),
     ])
-      .then(([evt, price]) => {
+      .then(([evt, price, myTickets]) => {
+        const existing = myTickets.find(
+          (t) => t.event_id === eventId && (t.status === "confirmed" || t.status === "pending")
+        );
+        if (existing) {
+          router.replace("/(tabs)/tickets");
+          return;
+        }
         setEvent(evt);
         setTicketPrice(price);
       })
@@ -121,6 +129,10 @@ export default function BuyTicketScreen() {
         setIsVerifying(false);
       }
     } catch (e: any) {
+      if (e?.response?.status === 409) {
+        router.replace("/(tabs)/tickets");
+        return;
+      }
       const msg =
         e?.response?.data?.message ||
         "Une erreur est survenue lors de l'achat.";

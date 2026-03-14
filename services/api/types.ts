@@ -96,6 +96,8 @@ export interface VoteEvent {
   voting_end_date?: string | null;
   is_voting_open?: boolean;
   voting_time_remaining?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface VoteArtist {
@@ -226,7 +228,7 @@ export interface Ticket {
   qr_code: string;
   ls_order_id: string | null;
   scanned_at: string | null;
-  event?: Pick<Event, 'id' | 'title' | 'location' | 'event_date' | 'image_url'>;
+  event?: Pick<Event, 'id' | 'title' | 'location' | 'event_date' | 'end_time' | 'image_url' | 'status' | 'is_voting_open' | 'voting_end_date' | 'styles'>;
   created_at: string;
   updated_at: string;
 }

@@ -1,39 +1,46 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import { MapPin } from "lucide-react-native";
+import { MapPin, X } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
 
 interface LocationBadgeProps {
   location: string;
   onPress?: () => void;
+  onClear?: () => void;
 }
 
 export const LocationBadge: React.FC<LocationBadgeProps> = ({
   location,
   onPress,
+  onClear,
 }) => {
-  const content = (
+  const showClear = !!location && !!onClear;
+
+  const inner = (
     <View style={styles.container}>
       <MapPin size={20} color="#FFFFFF" strokeWidth={2} />
-      <Text style={styles.locationText}>{location}</Text>
+      <Text style={styles.locationText}>{location || "Ma position"}</Text>
+      {showClear && (
+        <Pressable onPress={onClear} hitSlop={8} style={styles.clearButton}>
+          <X size={12} color="#FFFFFF" strokeWidth={2.5} />
+        </Pressable>
+      )}
     </View>
   );
 
   if (onPress) {
     return (
       <Pressable onPress={onPress} style={styles.pressable}>
-        {content}
+        {inner}
       </Pressable>
     );
   }
 
-  return content;
+  return inner;
 };
 
 const styles = StyleSheet.create({
-  pressable: {
-    alignSelf: "flex-start",
-  },
+  pressable: {},
   container: {
     flexDirection: "row",
     alignItems: "center",
@@ -49,6 +56,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textAlign: "center",
     letterSpacing: -0.24,
+  },
+  clearButton: {
+    marginLeft: -4,
   },
 });
 

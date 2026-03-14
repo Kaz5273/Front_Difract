@@ -10,6 +10,7 @@ import {
 import { router } from "expo-router";
 import { ArtistCard } from "@/components/Artist/ArtistCard";
 import { Header } from "@/components/Header/header";
+import { FaqSection } from "@/components/FaqSection";
 import { Fonts } from "@/constants/theme";
 import { apiClient, getMediaUrl } from "@/services/api/client";
 import { ENDPOINTS } from "@/services/api/endpoints";
@@ -71,14 +72,7 @@ export default function FavoritesScreen() {
     </View>
   );
 
-  const ListFooter = () => (
-    <View style={styles.footer}>
-      <Text style={styles.footerGrey}>
-        Vous ne trouvez pas votre bonheur ? Des questions ?{" "}
-      </Text>
-      <Text style={styles.footerWhite}>Rendez-vous dans notre FAQ.</Text>
-    </View>
-  );
+  const ListFooter = () => <FaqSection />;
 
   return (
     <View style={styles.container}>

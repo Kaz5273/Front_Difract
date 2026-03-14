@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { FaqSection } from "@/components/FaqSection";
 import { BlurView } from "expo-blur";
 import { ChevronLeft, Pencil, MapPin } from "lucide-react-native";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
@@ -298,15 +299,7 @@ export default function ArtistProfileManageScreen() {
             <EditButton />
           </View>
 
-          {/* FAQ footer */}
-          <View style={styles.faqFooter}>
-            <Text style={styles.faqText}>
-              Vous ne trouvez pas votre bonheur ? Des questions ?
-            </Text>
-            <Pressable>
-              <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
-            </Pressable>
-          </View>
+          <FaqSection />
         </ThemedView>
       </ParallaxScrollView>
 

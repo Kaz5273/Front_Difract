@@ -55,7 +55,7 @@ export const EventHeaderImage: React.FC<EventHeaderImageProps> = ({
       <View style={styles.bottomContent}>
         {/* Music Styles en bas à gauche */}
         <View style={styles.stylesContainer}>
-          <StyleBadges styles={musicStyles} maxVisible={2} />
+          <StyleBadges styles={musicStyles} maxVisible={musicStyles.length} />
         </View>
       </View>
     </ImageBackground>

@@ -5,23 +5,30 @@ import { Fonts } from "@/constants/theme";
 
 interface VoteCountdownProps {
   secondsRemaining: number;
+  onExpire?: () => void;
 }
 
-export const VoteCountdown: React.FC<VoteCountdownProps> = ({ secondsRemaining }) => {
+export const VoteCountdown: React.FC<VoteCountdownProps> = ({ secondsRemaining, onExpire }) => {
   const [remaining, setRemaining] = useState(Math.max(0, secondsRemaining));
 
   useEffect(() => {
     const initial = Math.max(0, secondsRemaining);
     setRemaining(initial);
 
-    if (initial <= 0) return;
+    if (initial <= 0) {
+      onExpire?.();
+      return;
+    }
 
     const startedAt = Date.now();
     const timer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
       const next = Math.max(0, initial - elapsed);
       setRemaining(next);
-      if (next <= 0) clearInterval(timer);
+      if (next <= 0) {
+        clearInterval(timer);
+        onExpire?.();
+      }
     }, 1000);
 
     return () => clearInterval(timer);
@@ -33,6 +40,15 @@ export const VoteCountdown: React.FC<VoteCountdownProps> = ({ secondsRemaining }
   const seconds = remaining % 60;
 
   const pad = (n: number) => n.toString().padStart(2, "0");
+
+  if (remaining <= 0) {
+    return (
+      <View style={[styles.container, styles.expiredContainer]}>
+        <Clock size={20} color="#000000" />
+        <Text style={[styles.timerText, styles.expiredText]}>Vote terminé</Text>
+      </View>
+    );
+  }
 
   const timeString =
     days > 0
@@ -62,6 +78,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FC5F67",
     letterSpacing: -0.24,
+  },
+  expiredContainer: {
+    backgroundColor: "#FFFFFF",
+  },
+  expiredText: {
+    color: "#000000",
   },
 });
 

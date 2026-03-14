@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Pressable,
@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { BlurView } from "expo-blur";
 import { ChevronLeft, MapPin, Calendar, Clock } from "lucide-react-native";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
@@ -24,6 +24,9 @@ import { useEventDetail } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { getMediaUrl } from "@/services/api/client";
 import { Artist } from "@/services/api/types";
+import { markEventsNeedRefresh } from "@/store/events-store";
+import { locationService } from "@/services/location/location.service";
+import { haversineKm } from "@/utils/distance";
 
 function getVotingSecondsRemaining(
   votingTimeRemaining?: number | null,
@@ -63,11 +66,56 @@ export default function EventDetailScreen() {
   const { showModal, setShowModal, guard } = useGuestGuard();
   const { user } = useAuth();
   const { event, isLoading, error, fetchEvent } = useEventDetail(eventId);
-  useEffect(() => {
-    fetchEvent();
-  }, [fetchEvent]);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  if (isLoading) {
+  useEffect(() => {
+    locationService.getCachedLocation().then((c) => { if (c) setUserCoords(c); });
+  }, []);
+
+  // Chargement initial + refresh silencieux au retour sur l'écran
+  useFocusEffect(useCallback(() => { fetchEvent(); }, [fetchEvent]));
+
+  // Détecter quand is_voting_open passe de true → false pour signaler le refresh
+  const prevVotingOpenRef = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (prevVotingOpenRef.current === true && event?.is_voting_open === false) {
+      markEventsNeedRefresh();
+    }
+    prevVotingOpenRef.current = event?.is_voting_open;
+  }, [event?.is_voting_open]);
+
+  // Auto-refresh quand les votes sont ouverts :
+  // - Polling de fond toutes les 30s (détecte une fermeture anticipée)
+  // - 5s avant la fin prévue → poll toutes les 1s pour mise à jour précise
+  // voting_time_remaining exclu des dépendances pour éviter le feedback loop
+  useEffect(() => {
+    if (!event?.is_voting_open) return;
+
+    const remaining = event.voting_time_remaining;
+    let fastTimer: ReturnType<typeof setTimeout>;
+    let fastInterval: ReturnType<typeof setInterval>;
+
+    // Polling de fond : détecte fermeture anticipée dans les 30s
+    const slowInterval = setInterval(() => { fetchEvent(); }, 30_000);
+
+    // Polling rapide dans les 5 dernières secondes
+    if (remaining != null && remaining > 5) {
+      fastTimer = setTimeout(() => {
+        fastInterval = setInterval(() => { fetchEvent(); }, 1_000);
+      }, (remaining - 5) * 1000);
+    } else {
+      fastInterval = setInterval(() => { fetchEvent(); }, 1_000);
+    }
+
+    return () => {
+      clearInterval(slowInterval);
+      clearTimeout(fastTimer);
+      clearInterval(fastInterval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.is_voting_open, fetchEvent]);
+
+  if (isLoading && !event) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#FC5F67" />
@@ -100,6 +148,8 @@ export default function EventDetailScreen() {
 
   const isArtist = user?.role === "ARTIST";
   const isVotingOpen = event.is_voting_open === true;
+  const eventEndDate = event.end_time ? new Date(event.end_time) : new Date(event.event_date);
+  const isEventPast = event.status === "DONE" || eventEndDate < new Date();
 
   return (
     <View style={{ flex: 1 }}>
@@ -130,6 +180,11 @@ export default function EventDetailScreen() {
             </ThemedText>
             {event.is_voting_open ? (
               <VoteCountdown secondsRemaining={getVotingSecondsRemaining(event.voting_time_remaining, event.voting_end_date)} />
+            ) : isEventPast ? (
+              <View style={styles.voteDoneBadge}>
+                <Clock size={20} color="#000000" />
+                <Text style={styles.voteDoneBadgeText}>Événement passé</Text>
+              </View>
             ) : event.voting_end_date ? (
               <View style={styles.voteDoneBadge}>
                 <Clock size={20} color="#000000" />
@@ -154,7 +209,14 @@ export default function EventDetailScreen() {
             </View>
             <View style={styles.infoRow}>
               <MapPin size={16} color="#FFFFFF" />
-              <Text style={styles.infoText}>{event.location}</Text>
+              <Text style={styles.infoText}>
+                {event.location}
+                {(() => {
+                  if (!userCoords || event.latitude == null || event.longitude == null) return "";
+                  const km = Math.round(haversineKm(userCoords.latitude, userCoords.longitude, event.latitude, event.longitude));
+                  return km > 0 ? ` - ${km} km` : "";
+                })()}
+              </Text>
             </View>
           </View>
 
@@ -210,7 +272,7 @@ export default function EventDetailScreen() {
               </Pressable>
             )}
 
-            {!isVotingOpen && (
+            {!isVotingOpen && !isEventPast && (
               <Pressable
                 onPress={() => guard(() => router.push(`/ticket/buy/${event.id}`))}
                 style={styles.ticketButton}

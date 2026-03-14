@@ -77,8 +77,7 @@ const filterStyles = StyleSheet.create({
     paddingLeft: 20,
   },
   badge: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    padding: 10,
     backgroundColor: "#2c2c2c",
     borderRadius: 20,
     marginRight: 8,
@@ -87,7 +86,7 @@ const filterStyles = StyleSheet.create({
     backgroundColor: "#FC5F67",
   },
   badgeText: {
-    fontFamily: Fonts.semiBold,
+    fontFamily: Fonts.regular,
     fontSize: 11,
     color: "#818181",
     textAlign: "center",

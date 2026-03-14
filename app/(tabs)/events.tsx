@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { View, StyleSheet, ScrollView, ActivityIndicator, Text, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header } from "@/components/Header/header";
+import { FaqSection } from "@/components/FaqSection";
 import { EventCard } from "@/components/Event/EventCard";
 import { LocationBadge } from "@/components/Badges/LocationBadge";
 import { CalendarBadge } from "@/components/Badges/CalendarBadge";
@@ -9,7 +10,7 @@ import { CalendarModal, QuickFilter } from "@/components/Calendar/CalendarModal"
 import { StyleFilterModal } from "@/components/Modals/StyleFilterModal";
 import { TabSelector } from "@/components/Button/TabSelector";
 import FilterBadge from "@/components/Badges/FilterBadge";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useGuestGuard } from "@/hooks/use-guest-guard";
 import { GuestActionModal } from "@/components/GuestActionModal";
 import { useEvents } from "@/hooks/use-events";
@@ -19,6 +20,7 @@ import { useLocationStore } from "@/store/location-store";
 import { LocationSearchModal } from "@/components/Modals/LocationSearchModal";
 import { Event } from "@/services/api/types";
 import { Fonts } from "@/constants/theme";
+import { consumeEventsNeedRefresh } from "@/store/events-store";
 
 function formatTimeRange(eventDate: string, endTime?: string | null): string {
   const start = new Date(eventDate);
@@ -37,16 +39,21 @@ export default function EvenementsScreen() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [activeQuickFilter, setActiveQuickFilter] = useState<QuickFilter | null>(null);
   const [quickFilterLabel, setQuickFilterLabel] = useState<string | undefined>(undefined);
+  const [dateFilterRange, setDateFilterRange] = useState<{ start: Date; end: Date } | null>(null);
   const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"first" | "second">("first");
   const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const { city: userCity, setCity } = useLocationStore();
+  const { city: userCity, isManualCity, manualCoords, setCity, setManualCity, clearCity } = useLocationStore();
   const [showLocationModal, setShowLocationModal] = useState(false);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const { events, pastEvents, isLoading, isPastLoading, error, pastError, fetchUpcoming, fetchPast } = useEvents();
   const { styles: musicStyles } = useStyles();
 
   useEffect(() => {
+    if (isManualCity && manualCoords) {
+      setUserCoords(manualCoords);
+      return;
+    }
     const loadLocation = async () => {
       const cached = await locationService.getCachedLocation();
       const coords = cached ?? await locationService.getCurrentPosition();
@@ -54,21 +61,64 @@ export default function EvenementsScreen() {
       setUserCoords(coords);
     };
     loadLocation();
-  }, []);
+  }, [isManualCity, manualCoords]);
+
+  const handleClearLocation = async () => {
+    const coords = await locationService.getCachedLocation() ?? await locationService.getCurrentPosition();
+    if (coords) {
+      const gpsCity = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      setCity(gpsCity ?? ""); // setCity = isManualCity: false
+      setUserCoords(coords);
+    } else {
+      clearCity();
+    }
+  };
 
   useEffect(() => {
     if (activeTab === "second") {
-      fetchPast();
+      fetchPast(userCoords ?? undefined);
     } else {
-      fetchUpcoming();
+      fetchUpcoming(undefined, userCoords ?? undefined);
     }
   }, [activeTab, userCoords]);
 
-  // Filtrage côté client par style(s) (GET /api/events n'existe pas → filtrage local)
+  // Re-fetch au retour sur le tab uniquement si un vote vient de se terminer
+  const lastFetchRef = useRef<number>(0);
+  useFocusEffect(useCallback(() => {
+    const voteEnded = consumeEventsNeedRefresh();
+    const now = Date.now();
+    if (voteEnded || now - lastFetchRef.current > 60_000) {
+      lastFetchRef.current = now;
+      if (activeTab === "second") fetchPast(userCoords ?? undefined);
+      else fetchUpcoming(undefined, userCoords ?? undefined);
+    }
+  }, [activeTab, userCoords, fetchUpcoming, fetchPast]));
+
+  const applyDateFilter = (list: Event[]) => {
+    if (selectedDate) {
+      return list.filter((e) => {
+        const d = new Date(e.event_date);
+        return d.getFullYear() === selectedDate.getFullYear() &&
+          d.getMonth() === selectedDate.getMonth() &&
+          d.getDate() === selectedDate.getDate();
+      });
+    }
+    if (dateFilterRange) {
+      return list.filter((e) => {
+        const d = new Date(e.event_date);
+        return d >= dateFilterRange.start && d <= dateFilterRange.end;
+      });
+    }
+    return list;
+  };
+
+  // Filtrage côté client par style(s) + date
   const filteredEvents = useMemo(() => {
-    if (selectedStyleIds.length === 0) return events;
-    return events.filter((e) => e.styles?.some((s) => selectedStyleIds.includes(s.id)));
-  }, [events, selectedStyleIds]);
+    let list = selectedStyleIds.length === 0 ? events : events.filter((e) => e.styles?.some((s) => selectedStyleIds.includes(s.id)));
+    return applyDateFilter(list);
+  }, [events, selectedStyleIds, selectedDate, dateFilterRange]);
+
+  const filteredPastEvents = useMemo(() => applyDateFilter(pastEvents), [pastEvents, selectedDate, dateFilterRange]);
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -84,6 +134,7 @@ export default function EvenementsScreen() {
           <LocationBadge
             location={userCity}
             onPress={() => guard(() => setShowLocationModal(true))}
+            onClear={isManualCity ? handleClearLocation : undefined}
           />
           <CalendarBadge
             onPress={() => guard(() => setCalendarVisible(true))}
@@ -93,6 +144,7 @@ export default function EvenementsScreen() {
               setSelectedDate(undefined);
               setActiveQuickFilter(null);
               setQuickFilterLabel(undefined);
+              setDateFilterRange(null);
             }}
           />
           <FilterBadge
@@ -105,7 +157,7 @@ export default function EvenementsScreen() {
           <TabSelector
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            firstLabel="Evenement à venir"
+            firstLabel="Évenement à venir"
             secondLabel="Événements passés"
           />
         </View>
@@ -120,11 +172,13 @@ export default function EvenementsScreen() {
             setSelectedDate(date);
             setActiveQuickFilter(null);
             setQuickFilterLabel(undefined);
+            setDateFilterRange(null);
           }}
-          onSelectQuickFilter={(type, label) => {
+          onSelectQuickFilter={(type, label, start, end) => {
             setActiveQuickFilter(type);
             setQuickFilterLabel(label);
             setSelectedDate(undefined);
+            setDateFilterRange({ start, end });
           }}
         />
         <StyleFilterModal
@@ -150,21 +204,21 @@ export default function EvenementsScreen() {
             </Pressable>
           </View>
         )}
-        {activeTab === "second" && !isPastLoading && !pastError && pastEvents.length === 0 && (
+        {activeTab === "second" && !isPastLoading && !pastError && filteredPastEvents.length === 0 && (
           <View style={styles.centerContainer}>
             <Text style={styles.emptyTitle}>Aucun événement passé{"\n"}pour le moment</Text>
             <Text style={styles.emptySubtitle}>Les événements passés{"\n"}apparaîtront ici.</Text>
           </View>
         )}
-        {activeTab === "second" && !isPastLoading && !pastError && pastEvents.length > 0 && (
+        {activeTab === "second" && !isPastLoading && !pastError && filteredPastEvents.length > 0 && (
           <View style={styles.eventsContainer}>
-            {pastEvents.map((event: Event) => (
+            {filteredPastEvents.map((event: Event) => (
               <EventCard
                 key={event.id}
                 id={event.id}
                 title={event.title}
                 location={event.location}
-                distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
+                distance={Math.round(event.distance_km ?? 0) > 0 ? `${Math.round(event.distance_km!)} km` : undefined}
                 eventDate={event.event_date}
                 timeRange={formatTimeRange(event.event_date, event.end_time)}
                 imageUrl={event.image_url || ""}
@@ -177,8 +231,8 @@ export default function EvenementsScreen() {
           </View>
         )}
 
-        {/* Loading */}
-        {activeTab === "first" && isLoading && (
+        {/* Loading — uniquement au premier chargement (liste vide) */}
+        {activeTab === "first" && isLoading && events.length === 0 && (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#FC5F67" />
           </View>
@@ -220,7 +274,7 @@ export default function EvenementsScreen() {
                 id={event.id}
                 title={event.title}
                 location={event.location}
-                distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
+                distance={Math.round(event.distance_km ?? 0) > 0 ? `${Math.round(event.distance_km!)} km` : undefined}
                 eventDate={event.event_date}
                 timeRange={formatTimeRange(event.event_date, event.end_time)}
                 imageUrl={event.image_url || ""}
@@ -233,19 +287,13 @@ export default function EvenementsScreen() {
           </View>
         )}
 
-        {/* FAQ Section */}
-        <View style={styles.faqSection}>
-          <Text style={styles.faqText}>
-            Vous ne trouvez pas votre bonheur ? Des questions ?
-          </Text>
-          <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
-        </View>
+        <FaqSection />
       </ScrollView>
 
       <LocationSearchModal
         visible={showLocationModal}
         onClose={() => setShowLocationModal(false)}
-        onSelectLocation={(city) => { setCity(city); setShowLocationModal(false); }}
+        onSelectLocation={(city, coords) => { setManualCity(city, coords); setUserCoords(coords); setShowLocationModal(false); }}
       />
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
     </SafeAreaView>
@@ -274,13 +322,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eventsContainer: {
-    gap: 16,
+    gap: 48,
     paddingHorizontal: 20,
+    marginTop: 32,
   },
   centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 32,
     paddingHorizontal: 40,
     gap: 16,
   },

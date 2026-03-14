@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo, useReducer } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useAudioPlayer as useExpoAudioPlayer } from "expo-audio";
 import {
   ChevronLeft,
@@ -34,7 +34,6 @@ import type { Vote } from "@/services/api/types";
 export default function VoteDetailScreen() {
   const { id } = useLocalSearchParams();
   const eventId = Number(id);
-  const userId = useAuthStore((s) => s.user?.id);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { event, isLoading, error, fetchEvent } = useEventDetail(eventId);
@@ -42,16 +41,28 @@ export default function VoteDetailScreen() {
 
   const [existingVote, setExistingVote] = useState<Vote | null>(null);
 
-  // Check if user already voted for this event
-  useEffect(() => {
-    if (!isAuthenticated || !userId || !eventId) return;
-    votesService.checkVoted(userId, eventId)
-      .then(setExistingVote)
+  // Check if user already voted for this event (also refreshes on screen focus)
+  const checkExistingVote = useCallback(() => {
+    if (!isAuthenticated || !eventId) return;
+    votesService.getMyVotes()
+      .then(votes => {
+        setExistingVote(votes.find(v => Number(v.event_id) === eventId || Number(v.event?.id) === eventId) ?? null);
+      })
       .catch(() => {});
-  }, [isAuthenticated, userId, eventId]);
+  }, [isAuthenticated, eventId]);
+
+  useEffect(() => { checkExistingVote(); }, [checkExistingVote]);
+
+  useFocusEffect(useCallback(() => { checkExistingVote(); }, [checkExistingVote]));
 
   const { showModal, setShowModal, guard } = useGuestGuard();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [{ sortAsc, currentIndex }, dispatchSort] = useReducer(
+    (state: { sortAsc: boolean; currentIndex: number }, action: { type: "TOGGLE_SORT" } | { type: "SET_INDEX"; index: number }) => {
+      if (action.type === "TOGGLE_SORT") return { sortAsc: !state.sortAsc, currentIndex: 0 };
+      return { ...state, currentIndex: action.index };
+    },
+    { sortAsc: false, currentIndex: 0 }
+  );
   const [progress, setProgress] = useState(0);
   const [playingArtistId, setPlayingArtistId] = useState<string | null>(null);
 
@@ -66,11 +77,23 @@ export default function VoteDetailScreen() {
   const carouselArtists = useMemo((): CarouselArtist[] => {
     if (!event?.artists?.length) return [];
 
+    // Rank is always based on votes desc (most votes = #1), independent of display order
+    // Stable sort: tiebreaker on id ensures asc is exact reverse of desc
+    const descSort = (a: typeof event.artists[0], b: typeof event.artists[0]) => {
+      const diff = (b.votes_count ?? 0) - (a.votes_count ?? 0);
+      return diff !== 0 ? diff : a.id - b.id;
+    };
+
+    const rankMap = new Map<number, number>();
+    [...event.artists]
+      .sort(descSort)
+      .forEach((artist, index) => rankMap.set(artist.id, index + 1));
+
     const sorted = [...event.artists].sort(
-      (a, b) => (b.votes_count ?? 0) - (a.votes_count ?? 0)
+      sortAsc ? (a, b) => -descSort(a, b) : descSort
     );
 
-    return sorted.map((artist, index) => {
+    return sorted.map((artist) => {
       const profileMedia = artist.media?.find(
         (m) => m.role === "PROFILE" && m.is_primary
       );
@@ -92,17 +115,18 @@ export default function VoteDetailScreen() {
         id: String(artist.id),
         name: artist.name,
         votes: artist.votes_count ?? 0,
-        rank: index + 1,
+        rank: rankMap.get(artist.id) ?? 0,
         imageUrl,
         styles,
         track: { title: trackTitle, duration: "" },
         trackUrl,
       };
     });
-  }, [event?.artists]);
+  }, [event?.artists, sortAsc]);
 
   const currentArtist = carouselArtists[currentIndex];
   const votingSecondsRemaining = event?.voting_time_remaining ?? 0;
+  const isVotingOver = event?.status === "DONE" || votingSecondsRemaining <= 0;
 
   const stopProgressTracking = useCallback(() => {
     if (progressIntervalRef.current) {
@@ -304,16 +328,24 @@ export default function VoteDetailScreen() {
                 </Text>
               </BlurView>
 
-              <Pressable style={styles.sortButton}>
+              <Pressable
+                style={styles.sortButton}
+                onPress={() => {
+                  dispatchSort({ type: "TOGGLE_SORT" });
+                  setPlayingArtistId(null);
+                  try { player.pause(); } catch (_) {}
+                }}
+              >
                 <ArrowDownUp size={20} color="#FFFFFF" />
               </Pressable>
             </View>
 
-            {/* Artist Carousel */}
+            {/* Artist Carousel — key forces remount on sort change so FlatList reorders views */}
             <VoteArtistCarousel
+              key={sortAsc ? "asc" : "desc"}
               artists={carouselArtists}
               currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
+              onIndexChange={(index) => dispatchSort({ type: "SET_INDEX", index })}
               onScrollEnd={handleScrollEnd}
               playingArtistId={playingArtistId}
               onPlayPress={(artistId: string) => guard(() => handlePlayPress(artistId))}
@@ -338,7 +370,19 @@ export default function VoteDetailScreen() {
         {/* Action Buttons */}
         {currentArtist && (
           <View style={styles.buttonsContainer}>
-            {existingVote && !canRevote ? (
+            {isVotingOver ? (
+              <View style={styles.alreadyVotedBanner}>
+                <Text style={styles.alreadyVotedText}>La session de vote est terminée</Text>
+                {existingVote && (
+                  <Text style={styles.alreadyVotedSub}>
+                    Vous aviez voté pour{" "}
+                    <Text style={styles.alreadyVotedName}>
+                      {carouselArtists.find((a) => a.id === String(existingVote.artist_id))?.name ?? "un artiste"}
+                    </Text>
+                  </Text>
+                )}
+              </View>
+            ) : existingVote && !canRevote ? (
               <View style={styles.alreadyVotedBanner}>
                 <Text style={styles.alreadyVotedText}>
                   Vous avez voté pour{" "}

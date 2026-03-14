@@ -3,6 +3,26 @@ import { eventService, EventFilters } from '@/services/events/events.service';
 import { artistsService } from '@/services/artists/artists.service';
 import { Event, Artist } from '@/services/api/types';
 import { getMediaUrl } from '@/services/api/client';
+import { haversineKm } from '@/utils/distance';
+
+type Coords = { latitude: number; longitude: number };
+
+function enrichAndSort(events: Event[], coords?: Coords): Event[] {
+  if (!coords) return events;
+  const enriched = events.map((e) => {
+    if (e.distance_km != null) return e;
+    if (e.latitude != null && e.longitude != null) {
+      return { ...e, distance_km: haversineKm(coords.latitude, coords.longitude, e.latitude, e.longitude) };
+    }
+    return e;
+  });
+  return enriched.sort((a, b) => {
+    if (a.distance_km == null && b.distance_km == null) return 0;
+    if (a.distance_km == null) return 1;
+    if (b.distance_km == null) return -1;
+    return a.distance_km - b.distance_km;
+  });
+}
 
 export function useEvents() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -12,12 +32,12 @@ export function useEvents() {
   const [error, setError] = useState<string | null>(null);
   const [pastError, setPastError] = useState<string | null>(null);
 
-  const fetchEvents = useCallback(async (filters?: EventFilters) => {
+  const fetchEvents = useCallback(async (filters?: EventFilters, coords?: Coords) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await eventService.getAll(filters);
-      setEvents(data);
+      setEvents(enrichAndSort(data, coords));
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Impossible de charger les événements');
     } finally {
@@ -25,12 +45,12 @@ export function useEvents() {
     }
   }, []);
 
-  const fetchUpcoming = useCallback(async (limit?: number) => {
+  const fetchUpcoming = useCallback(async (limit?: number, coords?: Coords) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await eventService.getUpcoming(limit);
-      setEvents(data);
+      setEvents(enrichAndSort(data, coords));
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Impossible de charger les événements');
     } finally {
@@ -38,15 +58,12 @@ export function useEvents() {
     }
   }, []);
 
-  const fetchPast = useCallback(async () => {
+  const fetchPast = useCallback(async (coords?: Coords) => {
     setIsPastLoading(true);
     setPastError(null);
     try {
       const data = await eventService.getPast();
-      console.log('[PastEvents] count:', data.length);
-      if (data[0]) console.log('[PastEvents] first event keys:', Object.keys(data[0]));
-      data.forEach(e => console.log('[PastEvent]', JSON.stringify({ id: e.id, title: e.title, image_url: e.image_url, cover: (e as any).cover, cover_url: (e as any).cover_url })));
-      setPastEvents(data);
+      setPastEvents(enrichAndSort(data, coords));
     } catch (e: any) {
       setPastError(e?.response?.data?.message || 'Impossible de charger les événements passés');
     } finally {
@@ -68,6 +85,12 @@ export function useEventDetail(id: number) {
     try {
       const data = await eventService.getById(id);
 
+      // Compute event-specific vote counts from event.votes (not artist.votes_count which is global)
+      const votesByArtist = (data.votes ?? []).reduce<Record<number, number>>((acc, v) => {
+        acc[v.artist_id] = (acc[v.artist_id] ?? 0) + 1;
+        return acc;
+      }, {});
+
       // Enrich artists with media from detail endpoint (event API doesn't include media)
       if (data.artists && data.artists.length > 0) {
         const details = await Promise.allSettled(
@@ -84,12 +107,13 @@ export function useEventDetail(id: number) {
             ];
             return {
               ...artist,
+              votes_count: votesByArtist[artist.id] ?? 0,
               media: detail.media,
               media_url: profileMedia ? getMediaUrl(profileMedia) || artist.media_url : artist.media_url,
               styles: artist.styles?.length ? artist.styles : detailStyles,
             } as Artist;
           }
-          return artist;
+          return { ...artist, votes_count: votesByArtist[artist.id] ?? 0 };
         });
       }
 

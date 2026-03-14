@@ -142,6 +142,13 @@ export const VoteArtistCarousel: React.FC<VoteArtistCarouselProps> = ({
     [artists.length]
   );
 
+  // Scroll to currentIndex when it changes from parent (e.g. sort toggle)
+  useEffect(() => {
+    // Small delay to let FlatList re-render with new data before scrolling
+    const t = setTimeout(() => scrollToIndex(currentIndex), 50);
+    return () => clearTimeout(t);
+  }, [currentIndex, scrollToIndex]);
+
   const handlePrevPress = useCallback(() => {
     const newIndex = currentIndexRef.current - 1;
     if (newIndex >= 0) {

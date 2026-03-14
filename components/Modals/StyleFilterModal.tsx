@@ -164,6 +164,7 @@ const s = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: 10,
     paddingBottom: 32,
+    minHeight: "55%",
     maxHeight: "80%",
   },
   handleBar: {
@@ -233,12 +234,13 @@ const s = StyleSheet.create({
     textDecorationLine: "underline",
   },
   scrollView: {
-    maxHeight: 280,
+    flex: 1,
+    minHeight: 100,
   },
   chipsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 16,
     paddingHorizontal: 20,
     paddingBottom: 8,
   },

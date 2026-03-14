@@ -1,5 +1,4 @@
 import { Fonts } from "@/constants/theme";
-import { locationService } from "@/services/location/location.service";
 import { X } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -22,12 +21,14 @@ interface LocationResult {
   city: string;
   region?: string;
   country?: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface LocationSearchModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelectLocation: (city: string) => void;
+  onSelectLocation: (city: string, coords: { latitude: number; longitude: number }) => void;
 }
 
 async function searchLocations(query: string): Promise<LocationResult[]> {
@@ -49,7 +50,7 @@ async function searchLocations(query: string): Promise<LocationResult[]> {
         const label = parts.join(", ");
         if (seen.has(label)) return acc;
         seen.add(label);
-        acc.push({ id: String(item.place_id ?? idx), label, city, region, country });
+        acc.push({ id: String(item.place_id ?? idx), label, city, region, country, latitude: parseFloat(item.lat), longitude: parseFloat(item.lon) });
         return acc;
       }, []);
   } catch {
@@ -97,7 +98,7 @@ export function LocationSearchModal({
   }, [query]);
 
   const handleSelect = (result: LocationResult) => {
-    onSelectLocation(result.city || result.label);
+    onSelectLocation(result.city || result.label, { latitude: result.latitude, longitude: result.longitude });
     onClose();
   };
 

@@ -55,7 +55,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Intercepteur de réponse - Gère les erreurs 401
+// Intercepteur de réponse - Gère les erreurs 401 et 429
 apiClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
@@ -68,7 +68,7 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const status = error.response?.status;
-    
+
     if (__DEV__) {
       console.error('❌ API Error:', {
         url: error.config?.url,
@@ -77,12 +77,21 @@ apiClient.interceptors.response.use(
         data: error.response?.data,
       });
     }
-    
+
     if (status === 401 && error.config?.headers?.Authorization) {
       console.warn('⚠️ Unauthorized - Clearing auth data');
       await storage.clearAll();
     }
-    
+
+    // Retry automatique après délai si 429 (max 1 retry)
+    if (status === 429 && error.config && !(error.config as any).__retried) {
+      const retryAfter = Number(error.response?.headers?.['retry-after'] ?? 10);
+      if (__DEV__) console.warn(`⏳ Rate limited — retry in ${retryAfter}s`);
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+      (error.config as any).__retried = true;
+      return apiClient.request(error.config);
+    }
+
     return Promise.reject(error);
   }
 );

@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header/header";
+import { FaqSection } from "@/components/FaqSection";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { router } from "expo-router";
@@ -43,23 +44,22 @@ function formatTimeRange(eventDate: string, endTime?: string | null): string {
 export default function HomeScreen() {
   const { user, isAuthenticated } = useAuth();
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
-  const { city: displayCity, setCity: setDisplayCity } = useLocationStore();
+  const { city: displayCity, isManualCity, manualCoords, setCity: setDisplayCity, setManualCity, clearCity } = useLocationStore();
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const { showModal, setShowModal, guard } = useGuestGuard();
   const { artists, isLoading: artistsLoading, fetchArtists } = useArtists();
   const { events, isLoading: eventsLoading, fetchUpcoming } = useEvents();
 
   const { load: loadFavorites, add: addFavorite, remove: removeFavorite, isFavorite } = useFavoritesStore();
 
+  // Initialisation : charger ville GPS et coords au démarrage
   useEffect(() => {
-    if (!isAuthenticated) return;
-    // Ne pas écraser une ville déjà choisie par l'utilisateur
-    if (displayCity) return;
-    if (user?.city) {
-      setDisplayCity(user.city);
+    if (isManualCity && manualCoords) {
+      setUserCoords(manualCoords);
       return;
     }
-    (async () => {
+    const loadLocation = async () => {
       let coords = await locationService.getCachedLocation();
       if (!coords) {
         const active = await locationService.isLocationActive();
@@ -69,16 +69,32 @@ export default function HomeScreen() {
         }
       }
       if (!coords) return;
+      setUserCoords(coords);
+      // Ne pas écraser une ville déjà choisie (profil)
+      if (displayCity) return;
+      if (user?.city) { setDisplayCity(user.city); return; }
       const city = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
       if (city) setDisplayCity(city);
-    })();
-  }, [user?.city, isAuthenticated]);
+    };
+    loadLocation();
+  }, [user?.city, isManualCity, manualCoords]);
 
-  // Charger les données publiques (artistes + events) pour tous les utilisateurs
+  // Re-fetch artistes + events quand les coords changent
   useEffect(() => {
-    fetchArtists();
-    fetchUpcoming(5);
-  }, []);
+    fetchArtists(userCoords ?? undefined);
+    fetchUpcoming(5, userCoords ?? undefined);
+  }, [userCoords]);
+
+  const handleClearLocation = async () => {
+    const coords = await locationService.getCachedLocation() ?? await locationService.getCurrentPosition();
+    if (coords) {
+      const gpsCity = await locationService.getCityFromCoords(coords.latitude, coords.longitude);
+      setDisplayCity(gpsCity ?? "");
+      setUserCoords(coords);
+    } else {
+      clearCity();
+    }
+  };
 
   // Charger les favoris uniquement si connecté
   useEffect(() => {
@@ -175,89 +191,93 @@ export default function HomeScreen() {
         <View style={styles.locationContainer}>
           <LocationBadge
             location={displayCity}
-            onPress={() => setShowLocationModal(true)}
+            onPress={() => guard(() => setShowLocationModal(true))}
+            onClear={isManualCity ? handleClearLocation : undefined}
           />
         </View>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="h1">Découvrez des artistes</ThemedText>
-        </ThemedView>
-
         {/* Section Artistes */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.artistsSection}
-        >
-          {artistsLoading && (
-            <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
-          )}
-          {artists.map((artist) => (
-            <ArtistCard
-              key={artist.id}
-              id={String(artist.id)}
-              name={artist.name}
-              subtitle={getTrackName(artist)}
-              location={artist.city || ''}
-              imageUrl={(() => {
-                const profileMedia = artist.media?.find((m) => m.role === 'PROFILE' && m.is_primary);
-                return profileMedia ? getMediaUrl(profileMedia) || '' : artist.media_url || '';
-              })()}
-              styles={artist.styles?.map((s) => s.name) || []}
-              trackId={`track-${artist.id}`}
-              isFavorite={isFavorite(String(artist.id))}
-              onPress={() => router.push(`/artist/${artist.id}`)}
-              onFavoritePress={() => guard(() => toggleFavorite(String(artist.id)))}
-              onPlayPress={() => handlePlayArtist(artist)}
-            />
-          ))}
-        </ScrollView>
-
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="h1">
-            Les événements {"\n"}proche de chez vous
-          </ThemedText>
-        </ThemedView>
-
-        {/* Section Événements */}
-        {eventsLoading ? (
-          <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
-        ) : events.length === 0 ? (
-          <View style={styles.eventEmptyContainer}>
-            <Text style={styles.eventEmptyTitle}>Les événements arrivent bientôt !</Text>
-            <Text style={styles.eventEmptySubtitle}>Revenez nous voir très vite.</Text>
-          </View>
-        ) : (
+        <View style={styles.section}>
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="h1">Découvrez des artistes</ThemedText>
+          </ThemedView>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.eventSection}
+            contentContainerStyle={styles.artistsSection}
           >
-            {events.map((event) => (
-              <View key={event.id} style={styles.eventCardWrapper}>
-                <EventCard
-                  id={event.id}
-                  title={event.title}
-                  location={event.location}
-                  distance={event.distance_km ? `${Math.round(event.distance_km)} km` : undefined}
-                  eventDate={event.event_date}
-                  timeRange={formatTimeRange(event.event_date, event.end_time)}
-                  imageUrl={event.image_url || ""}
-                  styles={event.styles?.map((s) => s.name) || []}
-                  isVotingOpen={event.is_voting_open ?? false}
-                  votingEndDate={event.voting_end_date}
-                  onPress={() => router.push(`/event/${event.id}`)}
-                />
-              </View>
+            {artistsLoading && (
+              <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
+            )}
+            {artists.map((artist) => (
+              <ArtistCard
+                key={artist.id}
+                id={String(artist.id)}
+                name={artist.name}
+                subtitle={getTrackName(artist)}
+                location={artist.city || ''}
+                imageUrl={(() => {
+                  const profileMedia = artist.media?.find((m) => m.role === 'PROFILE' && m.is_primary);
+                  return profileMedia ? getMediaUrl(profileMedia) || '' : artist.media_url || '';
+                })()}
+                styles={artist.styles?.map((s) => s.name) || []}
+                trackId={`track-${artist.id}`}
+                isFavorite={isFavorite(String(artist.id))}
+                onPress={() => router.push(`/artist/${artist.id}`)}
+                onFavoritePress={() => guard(() => toggleFavorite(String(artist.id)))}
+                onPlayPress={() => handlePlayArtist(artist)}
+              />
             ))}
           </ScrollView>
-        )}
+        </View>
+
+        {/* Section Événements */}
+        <View style={styles.section}>
+          <ThemedView style={styles.titleContainer}>
+            <ThemedText type="h1">
+              Les événements {"\n"}proche de chez vous
+            </ThemedText>
+          </ThemedView>
+          {eventsLoading ? (
+            <ActivityIndicator size="small" color="#FC5F67" style={{ marginHorizontal: 20 }} />
+          ) : events.length === 0 ? (
+            <View style={styles.eventEmptyContainer}>
+              <Text style={styles.eventEmptyTitle}>Les événements arrivent bientôt !</Text>
+              <Text style={styles.eventEmptySubtitle}>Revenez nous voir très vite.</Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.eventSection}
+            >
+              {events.map((event) => (
+                <View key={event.id} style={styles.eventCardWrapper}>
+                  <EventCard
+                    id={event.id}
+                    title={event.title}
+                    location={event.location}
+                    distance={Math.round(event.distance_km ?? 0) > 0 ? `${Math.round(event.distance_km!)} km` : undefined}
+                    eventDate={event.event_date}
+                    timeRange={formatTimeRange(event.event_date, event.end_time)}
+                    imageUrl={event.image_url || ""}
+                    styles={event.styles?.map((s) => s.name) || []}
+                    isVotingOpen={event.is_voting_open ?? false}
+                    votingEndDate={event.voting_end_date}
+                    onPress={() => router.push(`/event/${event.id}`)}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+        <FaqSection />
       </ScrollView>
 
       <GuestActionModal visible={showModal} onClose={() => setShowModal(false)} />
       <LocationSearchModal
         visible={showLocationModal}
         onClose={() => setShowLocationModal(false)}
-        onSelectLocation={(city) => setDisplayCity(city)}
+        onSelectLocation={(city, coords) => { setManualCity(city, coords); setUserCoords(coords); }}
       />
     </SafeAreaView>
   );
@@ -273,13 +293,16 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingVertical: 10,
-    gap: 16,
+    paddingBottom: 130,
+    gap: 48,
+  },
+  section: {
+    gap: 24,
   },
   titleContainer: {
     flexDirection: "row",
     gap: 20,
     paddingHorizontal: 20,
-    marginBottom: 5,
   },
   artistsSection: {
     flexDirection: "row",

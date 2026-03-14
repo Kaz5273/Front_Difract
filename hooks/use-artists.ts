@@ -1,17 +1,31 @@
 import { useState, useCallback } from 'react';
 import { artistsService, ArtistDetail } from '@/services/artists/artists.service';
 import { Artist } from '@/services/api/types';
+import { haversineKm } from '@/utils/distance';
+
+type Coords = { latitude: number; longitude: number };
 
 export function useArtists() {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArtists = useCallback(async () => {
+  const fetchArtists = useCallback(async (coords?: Coords) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await artistsService.getAll();
+      if (coords) {
+        data.sort((a, b) => {
+          const da = a.latitude != null && a.longitude != null
+            ? haversineKm(coords.latitude, coords.longitude, a.latitude, a.longitude)
+            : Infinity;
+          const db = b.latitude != null && b.longitude != null
+            ? haversineKm(coords.latitude, coords.longitude, b.latitude, b.longitude)
+            : Infinity;
+          return da - db;
+        });
+      }
       setArtists(data);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Impossible de charger les artistes');

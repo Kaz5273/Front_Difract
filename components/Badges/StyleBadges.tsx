@@ -31,7 +31,7 @@ export const StyleBadges: React.FC<StyleBadgesProps> = ({
         <BlurView
           intensity={15}
           tint="dark"
-          style={styles.badge}
+          style={styles.countBadge}
         >
           <Text style={styles.badgeText}>+{remainingCount}</Text>
         </BlurView>
@@ -50,6 +50,15 @@ const styles = StyleSheet.create({
     height: 30,
     paddingHorizontal: 8,
     borderRadius: 25,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(26, 26, 26, 0.8)",
+  },
+  countBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",

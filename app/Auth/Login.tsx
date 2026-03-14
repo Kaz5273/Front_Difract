@@ -23,13 +23,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoading, error, clearError } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, error, clearError } = useAuth();
 
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   const handleLogin = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await login(email.trim(), password);
 
@@ -47,6 +49,7 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch {
       Alert.alert("Erreur", "Email ou mot de passe incorrect");
+      setIsSubmitting(false);
     }
   };
 
@@ -60,7 +63,7 @@ export default function LoginScreen() {
         <Pressable
           style={styles.backButton}
           onPress={() => router.back()}
-          disabled={isLoading}
+          disabled={isSubmitting}
         >
           <Ionicons name="chevron-back" size={32} color="#FFFFFF" />
         </Pressable>
@@ -92,7 +95,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 autoComplete="email"
-                editable={!isLoading}
+                editable={!isSubmitting}
               />
             </View>
 
@@ -109,7 +112,7 @@ export default function LoginScreen() {
                 }}
                 secureTextEntry
                 autoComplete="password"
-                editable={!isLoading}
+                editable={!isSubmitting}
               />
             </View>
 
@@ -126,13 +129,13 @@ export default function LoginScreen() {
               style={[
                 styles.loginButton,
                 isFormValid && styles.loginButtonActive,
-                isLoading && styles.buttonDisabled,
+                isSubmitting && styles.buttonDisabled,
               ]}
               onPress={handleLogin}
-              disabled={!isFormValid || isLoading}
+              disabled={!isFormValid || isSubmitting}
             >
-              {isLoading ? (
-                <ActivityIndicator color={isFormValid ? "#FFFFFF" : "#6c6c6c"} />
+              {isSubmitting ? (
+                <ActivityIndicator color={isFormValid ? "#000000" : "#6c6c6c"} />
               ) : (
                 <Text
                   style={[
@@ -145,7 +148,7 @@ export default function LoginScreen() {
               )}
             </Pressable>
 
-            <Pressable style={styles.googleButton} disabled={isLoading}>
+            <Pressable style={styles.googleButton} disabled={isSubmitting}>
               <IconGoogle />
               <Text style={styles.googleButtonText}>
                 Continuer avec google
@@ -154,7 +157,7 @@ export default function LoginScreen() {
 
             <Pressable
               onPress={() => router.push("/Auth/register-public")}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               <Text style={styles.createAccountText}>Créer un compte</Text>
             </Pressable>

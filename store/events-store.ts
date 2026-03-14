@@ -1,9 +1,12 @@
 /**
- * Store événements (placeholder)
+ * Flag partagé : indique que la liste des events doit être rafraîchie
+ * (ex: un vote vient de se terminer sur la page detail)
  */
-export const eventsStore = {
-  getState: () => ([] as any[]),
-  subscribe: () => () => {},
-};
+let _eventsNeedRefresh = false;
 
-export default eventsStore;
+export const markEventsNeedRefresh = () => { _eventsNeedRefresh = true; };
+export const consumeEventsNeedRefresh = () => {
+  const v = _eventsNeedRefresh;
+  _eventsNeedRefresh = false;
+  return v;
+};

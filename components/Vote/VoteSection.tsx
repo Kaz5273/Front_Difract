@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { BlurView } from "expo-blur";
 import { Calendar, MapPin } from "lucide-react-native";
 import { Fonts } from "@/constants/theme";
@@ -10,7 +10,7 @@ interface VotingArtist {
   id: string;
   name: string;
   rank: number;
-  votes: number;
+  votes?: number;
   imageUrl: string;
   styles: string[];
   isVoted?: boolean;
@@ -24,6 +24,8 @@ interface VoteSectionProps {
   secondsRemaining: number;
   artists: VotingArtist[];
   onArtistPress?: (artist: VotingArtist) => void;
+  onInfoPress?: () => void;
+  onExpire?: () => void;
 }
 
 export const VoteSection: React.FC<VoteSectionProps> = ({
@@ -34,6 +36,8 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
   secondsRemaining,
   artists,
   onArtistPress,
+  onInfoPress,
+  onExpire,
 }) => {
   return (
     <View style={styles.container}>
@@ -42,11 +46,11 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
         <Text style={styles.eventName} numberOfLines={1}>
           {eventName}
         </Text>
-        <VoteCountdown secondsRemaining={secondsRemaining} />
+        <VoteCountdown secondsRemaining={secondsRemaining} onExpire={onExpire} />
       </View>
 
       {/* Info Card - date + location in single blur card */}
-      <View style={styles.infoCardWrapper}>
+      <Pressable style={styles.infoCardWrapper} onPress={onInfoPress}>
         <BlurView intensity={15} tint="dark" style={styles.infoCard}>
           <View style={styles.infoContent}>
             <View style={styles.infoRow}>
@@ -62,7 +66,7 @@ export const VoteSection: React.FC<VoteSectionProps> = ({
             </View>
           </View>
         </BlurView>
-      </View>
+      </Pressable>
 
       {/* Artists horizontal scroll */}
       <ScrollView

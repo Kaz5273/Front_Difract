@@ -17,6 +17,7 @@ const GRID_GAP = 12;
 const CARD_WIDTH = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP) / 2);
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Header } from "@/components/Header/header";
+import { FaqSection } from "@/components/FaqSection";
 import { SearchBar } from "@/components/Search/SearchBar";
 import FilterBadge from "@/components/Badges/FilterBadge";
 import { StyleFilterModal } from "@/components/Modals/StyleFilterModal";
@@ -33,6 +34,7 @@ import { Artist } from "@/services/api/types";
 import { getMediaUrl } from "@/services/api/client";
 import { artistsService } from "@/services/artists/artists.service";
 import { useFavoritesStore } from "@/store/favorites-store";
+import { useAuthStore } from "@/store/auth-store";
 import { X } from "lucide-react-native";
 import { StyleFilter } from "@/components/Button/StyleFilter";
 
@@ -46,9 +48,10 @@ export default function SearchScreen() {
   const { currentTrack, isPlaying, play, pause } = useAudioPlayer();
   const { showModal, setShowModal, guard } = useGuestGuard();
   const { artists, isLoading, fetchArtists } = useArtists();
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => { fetchArtists(); }, []);
-  useEffect(() => { loadFavorites(); }, []);
+  useEffect(() => { if (isAuthenticated) loadFavorites(); }, [isAuthenticated]);
 
   const getArtistImageUrl = (artist: Artist): string => {
     const profileMedia = artist.media?.find((m) => m.role === "PROFILE" && m.is_primary)
@@ -249,62 +252,60 @@ export default function SearchScreen() {
           onSelectStyles={setSelectedStyleIds}
         />
 
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#FC5F67" style={styles.loader} />
-        ) : isStyleFiltering ? (
-          <>
-            {filteredArtists.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Aucun artiste trouvé</Text>
-              </View>
-            ) : groupedBySelectedStyles.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Aucun artiste pour ces styles</Text>
-              </View>
-            ) : (
-              groupedBySelectedStyles.map((group) => (
-                <View key={group.styleId} style={styles.section}>
-                  <Text style={styles.sectionTitle}>{group.styleName}</Text>
-                  <View style={styles.flatGrid}>
-                    {group.artists.map((a) => renderArtistCard(a, true))}
-                  </View>
+        <View style={styles.contentWrapper}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FC5F67" style={styles.loader} />
+          ) : isStyleFiltering ? (
+            <>
+              {filteredArtists.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>Aucun artiste trouvé</Text>
                 </View>
-              ))
-            )}
-          </>
-        ) : (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Nouveaux sur la plateforme</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-              >
-                {filteredArtists.map((a) => renderArtistCard(a))}
-              </ScrollView>
-            </View>
-
-            {groupedByStyle.map((group) => (
-              <View key={group.styleId} style={styles.section}>
-                <Text style={styles.sectionTitle}>{group.styleName}</Text>
+              ) : groupedBySelectedStyles.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>Aucun artiste pour ces styles</Text>
+                </View>
+              ) : (
+                groupedBySelectedStyles.map((group) => (
+                  <View key={group.styleId} style={styles.section}>
+                    <Text style={styles.sectionTitle}>{group.styleName}</Text>
+                    <View style={styles.flatGrid}>
+                      {group.artists.map((a) => renderArtistCard(a, true))}
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          ) : (
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Nouveaux sur la plateforme</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.horizontalList}
                 >
-                  {group.artists.map((a) => renderArtistCard(a))}
+                  {filteredArtists.map((a) => renderArtistCard(a))}
                 </ScrollView>
               </View>
-            ))}
-          </>
-        )}
 
-        {/* FAQ */}
-        <View style={styles.faqContainer}>
-          <Text style={styles.faqText}>Vous ne trouvez pas votre bonheur ? Des questions ?</Text>
-          <Text style={styles.faqLink}>Rendez-vous dans notre FAQ.</Text>
+              {groupedByStyle.map((group) => (
+                <View key={group.styleId} style={styles.section}>
+                  <Text style={styles.sectionTitle}>{group.styleName}</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.horizontalList}
+                  >
+                    {group.artists.map((a) => renderArtistCard(a))}
+                  </ScrollView>
+                </View>
+              ))}
+            </>
+          )}
         </View>
+
+        <FaqSection />
       </ScrollView>
 
       {/* Search overlay */}
@@ -378,10 +379,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   loader: {
-    marginTop: 40,
+    marginTop: 0,
   },
   section: {
     gap: 16,
+  },
+  contentWrapper: {
+    marginTop: 24,
+    gap: 48,
   },
   sectionTitle: {
     fontFamily: Fonts.regular,

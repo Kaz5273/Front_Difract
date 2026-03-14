@@ -11,7 +11,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Header } from "@/components/Header/header";
 import { TicketCard } from "@/components/Ticket/TicketCard";
+import { FaqSection } from "@/components/FaqSection";
 import { ticketsService } from "@/services/tickets/tickets.service";
+import { eventService } from "@/services/events/events.service";
 import { Fonts } from "@/constants/theme";
 import type { Ticket } from "@/services/api/types";
 
@@ -23,28 +25,47 @@ export default function TicketsScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    ticketsService
-      .getMyTickets()
-      .then(setTickets)
+    ticketsService.getMyTickets()
+      .then(async (rawTickets) => {
+        // Enrichir chaque ticket avec les styles de l'event (non retournés par /me/tickets)
+        const eventIds = [...new Set(rawTickets.map((t) => t.event_id).filter(Boolean))];
+        const eventDetails = await Promise.all(
+          eventIds.map((id) => eventService.getById(id).catch(() => null))
+        );
+        const stylesMap = new Map(
+          eventDetails.filter(Boolean).map((e) => [e!.id, e!.styles ?? []])
+        );
+        const enriched = rawTickets.map((t) =>
+          t.event ? { ...t, event: { ...t.event, styles: stylesMap.get(t.event_id) ?? t.event.styles } } : t
+        );
+        setTickets(enriched);
+      })
       .catch(() => setTickets([]))
       .finally(() => setIsLoading(false));
   }, []);
 
   const now = new Date();
 
+  const isEventPast = (t: (typeof tickets)[0]) => {
+    if (!t.event) return false;
+    if (t.event.status === "DONE") return true;
+    const end = t.event.end_time ? new Date(t.event.end_time) : new Date(t.event.event_date);
+    return end < now;
+  };
+
   // "Acheté" = billets valides ou en attente pour des événements à venir
   const achetedTickets = tickets.filter(
     (t) =>
       (t.status === "confirmed" || t.status === "pending") &&
       t.event &&
-      new Date(t.event.event_date) >= now
+      !isEventPast(t)
   );
   // "Passé" = événement terminé, ou billet remboursé/annulé
   const passeTickets = tickets.filter(
     (t) =>
       t.status === "refunded" ||
       t.status === "cancelled" ||
-      (t.event && new Date(t.event.event_date) < now)
+      isEventPast(t)
   );
 
   const displayed = activeTab === "achete" ? achetedTickets : passeTickets;
@@ -129,13 +150,7 @@ export default function TicketsScreen() {
           </View>
         )}
 
-        {/* FAQ section */}
-        <View style={styles.faqSection}>
-          <Text style={styles.faqGray}>
-            Vous ne trouvez pas votre bonheur ? Des questions ?{" "}
-          </Text>
-          <Text style={styles.faqWhite}>Rendez-vous dans notre FAQ.</Text>
-        </View>
+        <FaqSection />
       </ScrollView>
     </SafeAreaView>
   );
@@ -205,6 +220,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 24,
     justifyContent: "space-between",
+    paddingBottom: 130,
   },
   centerContent: {
     flex: 1,
